@@ -1,0 +1,105 @@
+/* ── CLIENT TRANSACTIONS SPECIFIC STYLES ────────────────── */
+
+.tx-history-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.section-header-row {
+  padding: 24px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-main);
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.search-box-unified {
+  display: flex;
+  align-items: center;
+  background: #f1f5f9;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border-main);
+  flex: 1;
+  max-width: 400px;
+}
+
+.search-icon { margin-right: 10px; opacity: 0.5; }
+
+.search-box-unified input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-main);
+  width: 100%;
+}
+
+.filter-chips-unified {
+  display: flex;
+  gap: 8px;
+}
+
+.chip {
+  padding: 8px 18px;
+  border-radius: 20px;
+  border: 1px solid var(--border-main);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chip:hover { background: #f1f5f9; color: var(--primary); }
+.chip.active { background: #eff6ff; color: var(--primary); border-color: var(--primary); }
+
+.table-wrapper { overflow-x: auto; }
+
+.tx-table-unified {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tx-table-unified th {
+  padding: 16px 32px;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #f8fafc;
+}
+
+.tx-table-unified td {
+  padding: 20px 32px;
+  border-bottom: 1px solid #f1f5f9;
+  color: var(--text-main);
+  font-size: 0.95rem;
+}
+
+.tx-table-unified tr:last-child td { border-bottom: none; }
+.tx-table-unified tr:hover td { background: #f8fafc; }
+
+.font-medium { font-weight: 600; }
+
+.badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.badge.success { background: #dcfce7; color: #10b981; }
+.badge.pending { background: #ffedd5; color: #f59e0b; }
+
+.amount-cell {
+  font-weight: 700;
+  text-align: right;
+}
+
+.amount-cell.negative { color: var(--text-main); }
+.amount-cell.positive { color: #10b981; }

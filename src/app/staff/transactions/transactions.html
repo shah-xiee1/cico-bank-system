@@ -1,0 +1,161 @@
+<div class="command-layout">
+  <!-- Solid Sidebar -->
+  <aside class="command-sidebar">
+    <div class="sidebar-header">
+      <div class="logo-box">CCB</div>
+      <h2>CICO STAFF</h2>
+    </div>
+
+    <div class="profile-card">
+      <img src="/images/staff.jpg" class="avatar-sm" alt="Staff Avatar">
+      <div class="info">
+        <p class="name">Cindy Ma. Lala</p>
+        <p class="role">Banking Associate II</p>
+      </div>
+    </div>
+
+    <nav class="command-nav">
+      <div class="nav-section"></div>
+      <button class="nav-btn" routerLink="/staff" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+        </span>
+        Dashboard
+      </button>
+      <button class="nav-btn" routerLink="/transactions" routerLinkActive="active">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        </span>
+        Transactions
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="logout-btn" routerLink="/">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </span>
+        Logout Session
+      </button>
+    </div>
+  </aside>
+
+  <main class="command-main">
+    <header class="command-header">
+      <div>
+        <h1>All Transactions</h1>
+        <p class="text-muted">Review, approve or reject client transactions</p>
+      </div>
+    </header>
+
+    <div class="staff-tx-content">
+      <!-- Summary Row -->
+      <div class="tx-summary-grid">
+        <div class="solid-card summary-card pending-card clickable" (click)="setFilter('Pending')" [class.active-card]="filterStatus === 'Pending'">
+          <p class="summary-label">Pending</p>
+          <p class="summary-value">{{ stats.pending }}</p>
+        </div>
+        <div class="solid-card summary-card approved-card clickable" (click)="setFilter('Approved')" [class.active-card]="filterStatus === 'Approved'">
+          <p class="summary-label">Approved Today</p>
+          <p class="summary-value">{{ stats.approved }}</p>
+        </div>
+        <div class="solid-card summary-card rejected-card clickable" (click)="setFilter('Rejected')" [class.active-card]="filterStatus === 'Rejected'">
+          <p class="summary-label">Rejected Today</p>
+          <p class="summary-value">{{ stats.rejected }}</p>
+        </div>
+        <div class="solid-card summary-card total-card clickable" (click)="setFilter('All')" [class.active-card]="filterStatus === 'All'">
+          <p class="summary-label">Total Volume</p>
+          <p class="summary-value">{{ stats.totalVolume }}</p>
+        </div>
+      </div>
+
+      <!-- Main Panel -->
+      <div class="solid-card tx-panel">
+        <div class="filter-bar-solid-unified">
+          <div class="filter-search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" placeholder="Search transactions..." [(ngModel)]="searchQuery">
+          </div>
+          <div class="filter-chips-row">
+            <button class="chip" [class.active]="filterStatus==='All'"      (click)="setFilter('All')">All</button>
+            <button class="chip" [class.active]="filterStatus==='Pending'"  (click)="setFilter('Pending')">Pending</button>
+            <button class="chip" [class.active]="filterStatus==='Approved'" (click)="setFilter('Approved')">Approved</button>
+            <button class="chip" [class.active]="filterStatus==='Rejected'" (click)="setFilter('Rejected')">Rejected</button>
+          </div>
+        </div>
+
+        <div class="table-wrapper-unified">
+          <table class="logs-table-unified">
+            <thead>
+              <tr>
+                <th>Date &amp; Time</th>
+                <th>Client</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody *ngIf="allTransactions$ | async as allTxs">
+              <tr *ngFor="let tx of getFiltered(allTxs)" class="tx-row" (click)="openModal(tx)">
+                <td class="ts">{{ tx.date }}</td>
+                <td>
+                  <p class="log-title">{{ tx.client }}</p>
+                  <p class="log-desc">{{ tx.desc }}</p>
+                </td>
+                <td><span class="tag" [ngClass]="tx.typeClass">{{ tx.type }}</span></td>
+                <td class="tx-val" [ngClass]="tx.amountClass">{{ tx.amount }}</td>
+                <td><span class="status-badge" [ngClass]="tx.statusClass">{{ tx.status }}</span></td>
+                <td class="action-cell" (click)="$event.stopPropagation()">
+                  <ng-container *ngIf="tx.statusClass === 'pending'; else processed">
+                    <button class="btn-approve sm" (click)="approveTx(tx); $event.stopPropagation()">Approve</button>
+                    <button class="btn-reject sm" (click)="rejectTx(tx); $event.stopPropagation()">Reject</button>
+                  </ng-container>
+                  <ng-template #processed>
+                    <span class="processed-by">By: {{ tx.processedBy }}</span>
+                  </ng-template>
+                </td>
+              </tr>
+              <tr *ngIf="getFiltered(allTxs).length === 0">
+                <td colspan="6" class="no-results">No transactions found.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Detail Modal -->
+<div class="tx-modal-overlay" [class.open]="selectedTx" (click)="closeModal()">
+  <div class="tx-modal" (click)="$event.stopPropagation()" *ngIf="selectedTx">
+    <div class="tx-modal-header">
+      <h2>Transaction Details</h2>
+      <button class="tx-modal-close" (click)="closeModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="tx-modal-body">
+      <div class="tx-modal-amount-block">
+        <p class="tx-modal-amount tx-val" [ngClass]="selectedTx.amountClass">{{ selectedTx.amount }}</p>
+        <span class="status-badge" [ngClass]="selectedTx.statusClass">{{ selectedTx.status }}</span>
+      </div>
+      <div class="tx-modal-info-grid">
+        <div class="tx-info-item"><span class="tx-info-label">Client</span><span class="tx-info-value">{{ selectedTx.client }}</span></div>
+        <div class="tx-info-item"><span class="tx-info-label">Description</span><span class="tx-info-value">{{ selectedTx.desc }}</span></div>
+        <div class="tx-info-item"><span class="tx-info-label">Type</span><span class="tx-info-value"><span class="tag" [ngClass]="selectedTx.typeClass">{{ selectedTx.type }}</span></span></div>
+        <div class="tx-info-item"><span class="tx-info-label">Date &amp; Time</span><span class="tx-info-value">{{ selectedTx.date }}</span></div>
+        <div class="tx-info-item" *ngIf="selectedTx.processedBy"><span class="tx-info-label">Processed By</span><span class="tx-info-value">{{ selectedTx.processedBy }}</span></div>
+      </div>
+    </div>
+    <div class="tx-modal-footer" *ngIf="selectedTx.statusClass === 'pending'">
+      <button class="btn-approve modal-action-btn" (click)="approveTx(selectedTx)">Approve</button>
+      <button class="btn-reject modal-action-btn" (click)="rejectTx(selectedTx)">Reject</button>
+    </div>
+  </div>
+</div>

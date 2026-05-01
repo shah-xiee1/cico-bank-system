@@ -1,0 +1,60 @@
+<video autoplay muted loop playsinline id="bg-video">
+  <source src="/video/bg.mp4" type="video/mp4">
+</video>
+
+<div class="overlay"></div>
+
+<div class="login-container">
+  <div class="glass-card">
+    <div class="brand">
+      <div class="logo-icon">CCB</div>
+      <h1 class="logo-text">CICO BANK</h1>
+    </div>
+    
+    <p class="subtitle">Banking Simplified </p>
+
+    <div class="form-group">
+      <label>Email</label>
+      <input [(ngModel)]="email" type="email" placeholder="Enter your email" />
+    </div>
+    
+    <div class="form-group">
+      <label>Password</label>
+      <input [(ngModel)]="password" type="password" placeholder="Enter your password" />
+    </div>
+
+    <button class="login-btn" (click)="login()">
+       Login
+    </button>
+    
+    <div class="footer-links">
+      <a href="javascript:void(0)" (click)="toggleForgotModal(true)">Forgot Password?</a>
+    </div>
+  </div>
+
+  <!-- Recovery Modal -->
+  <div class="modal-overlay" *ngIf="showForgotModal" (click)="toggleForgotModal(false)">
+    <div class="glass-card recovery-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Password Recovery</h3>
+        <button class="close-btn" (click)="toggleForgotModal(false)">✕</button>
+      </div>
+
+      <div class="modal-body" *ngIf="!recoverySent">
+        <p class="modal-desc">Please enter your registered email. Your password reset request will be sent to the <strong>System Administrator</strong> for verification.</p>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input [(ngModel)]="forgotEmail" type="email" placeholder="name@example.com" />
+        </div>
+        <button class="login-btn" (click)="sendRecovery()">Submit Request</button>
+      </div>
+
+      <div class="modal-body success-state" *ngIf="recoverySent">
+        <div class="success-icon">✓</div>
+        <h3>Request Submitted</h3>
+        <p>Your request has been sent to the **System Admin**. Please contact your administrator or wait for further instructions via <strong>{{ forgotEmail }}</strong>.</p>
+        <button class="login-btn outline" (click)="toggleForgotModal(false)">Back to Login</button>
+      </div>
+    </div>
+  </div>
+</div>
