@@ -19,6 +19,7 @@ export class ClientComponent implements OnInit {
 
   currentUserName = 'Client';
   currentUserId = 'excel_john';
+  currentUserImage = '/images/client.jpg';
   currentDate: string = '';
 
   showSendModal = false;
@@ -37,6 +38,7 @@ export class ClientComponent implements OnInit {
   ngOnInit() {
     this.currentUserId = localStorage.getItem('currentUser') || 'excel_john';
     this.currentUserName = localStorage.getItem('currentUserName') || 'Excel John';
+    this.currentUserImage = this.currentUserId === 'jane_doe' ? '/images/client2.jpg' : '/images/client.jpg';
     this.currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
     this.dbService.initClientBalance(this.currentUserId);

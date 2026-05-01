@@ -1,14 +1,18 @@
 /* ── ADMIN DASHBOARD SPECIFIC STYLES ─────────────────────── */
 
 /* Stats Grid Override (if needed) */
-.admin-grid { grid-template-columns: repeat(2, 1fr); }
+.admin-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
 
 .stat-card {
   /* Specific stat card hover/style if any */
 }
 
 /* ── ANALYTICS PANEL ─────────────────────────────────────── */
-.mt-30 { margin-top: 28px; }
+.mt-30 {
+  margin-top: 28px;
+}
 
 .card-title-border {
   border-bottom: 1px solid var(--border-main);
@@ -55,9 +59,17 @@
   font-size: 1rem;
 }
 
-.success-text { color: #10b981; }
-.warning-text { color: #f59e0b; }
-.primary-text { color: var(--primary); }
+.success-text {
+  color: #10b981;
+}
+
+.warning-text {
+  color: #f59e0b;
+}
+
+.primary-text {
+  color: var(--primary);
+}
 
 .progress-track {
   width: 100%;
@@ -72,9 +84,17 @@
   border-radius: 10px;
 }
 
-.bg-success { background: #10b981; }
-.bg-warning { background: #f59e0b; }
-.bg-primary { background: var(--primary); }
+.bg-success {
+  background: #10b981;
+}
+
+.bg-warning {
+  background: #f59e0b;
+}
+
+.bg-primary {
+  background: var(--primary);
+}
 
 .metric-desc {
   font-size: 0.78rem;
@@ -92,16 +112,31 @@
   letter-spacing: 0.5px;
 }
 
-.tag.client { background: #eff6ff; color: #2563eb; }
-.tag.staff { background: #fdf2f8; color: #db2777; }
+.tag.client {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.tag.staff {
+  background: #fdf2f8;
+  color: #db2777;
+}
 
 @media (max-width: 1100px) {
-  .admin-grid { grid-template-columns: repeat(2, 1fr); }
-  .analytics-grid { grid-template-columns: 1fr; }
+  .admin-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
-  .command-layout { flex-direction: column; }
+  .command-layout {
+    flex-direction: column;
+  }
+
   .command-sidebar {
     width: 100%;
     flex-direction: row;
@@ -109,7 +144,31 @@
     align-items: center;
     justify-content: space-between;
   }
-  .profile-card, .command-nav { display: none; }
-  .admin-grid { grid-template-columns: 1fr; }
-  .command-main { padding: 20px; }
+
+  .profile-card,
+  .command-nav {
+    display: none;
+  }
+
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .command-main {
+    padding: 20px;
+  }
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar-table {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border-main);
 }

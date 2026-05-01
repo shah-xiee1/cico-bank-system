@@ -13,6 +13,7 @@ export interface TxData {
   status: string; statusClass: string;
   processedBy: string;
   timestamp: number;
+  image: string;
 }
 
 @Component({
@@ -31,6 +32,9 @@ export class Transactions implements OnInit {
 
   allTransactions$: Observable<TxData[]> = new Observable();
   
+  userName: string = 'Staff';
+  userImage: string = '/images/staff.jpg';
+
   stats = {
     pending: 0,
     approved: 0,
@@ -39,6 +43,8 @@ export class Transactions implements OnInit {
   };
 
   ngOnInit() {
+    this.userName = localStorage.getItem('currentUserName') || 'Cindy Ma. Lala';
+    this.userImage = '/images/staff.jpg';
     this.allTransactions$ = this.dbService.getTransactions().pipe(
       map(txs => {
         const mapped = txs.map(tx => {
@@ -60,7 +66,8 @@ export class Transactions implements OnInit {
             status: tx.status || 'Pending',
             statusClass: this.getStatusClass(tx.status || 'Pending'),
             processedBy: tx.processedBy || '',
-            timestamp: tx.timestamp || 0
+            timestamp: tx.timestamp || 0,
+            image: tx.senderId === 'jane_doe' ? '/images/client2.jpg' : '/images/client.jpg'
           };
         });
 
@@ -100,14 +107,14 @@ export class Transactions implements OnInit {
 
   async approveTx(tx: TxData) {
     if (tx.id) {
-      await this.dbService.updateTransactionStatus(tx.id, 'Approved', 'Cindy Ma. Lala');
+      await this.dbService.updateTransactionStatus(tx.id, 'Approved', this.userName);
       if (this.selectedTx?.id === tx.id) this.closeModal();
     }
   }
 
   async rejectTx(tx: TxData) {
     if (tx.id) {
-      await this.dbService.updateTransactionStatus(tx.id, 'Rejected', 'Cindy Ma. Lala');
+      await this.dbService.updateTransactionStatus(tx.id, 'Rejected', this.userName);
       if (this.selectedTx?.id === tx.id) this.closeModal();
     }
   }

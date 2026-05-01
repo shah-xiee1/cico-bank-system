@@ -45,7 +45,7 @@ export class DatabaseService {
         const txData = txSnap.data();
         const amountStr: string = txData['amount'] || '0';
         const numericAmount = parseFloat(amountStr.replace(/[^0-9.]/g, '')) || 0;
-        
+
         const senderId = txData['senderId'];
         const recipientId = txData['recipientId'];
         const isDeposit = txData['category'] === 'Deposit';
@@ -53,7 +53,7 @@ export class DatabaseService {
 
         if (isTransfer) {
           if (senderId) await this.adjustBalance(senderId, -numericAmount);
-          
+
           if (recipientId) {
             // Client to client transfer
             await this.adjustBalance(recipientId, numericAmount);
@@ -134,7 +134,14 @@ export class DatabaseService {
   // --- PASSWORD REQUESTS ---
   getPasswordRequests(): Observable<any[]> {
     const reqCollection = collection(this.firestore, 'password_requests');
-    return collectionData(reqCollection, { idField: 'id' });
+    return collectionData(reqCollection, { idField: 'id' }).pipe(
+      map(requests => requests.map(req => ({
+        ...req,
+        image: req['email'] === 'client2@cico.com' ? '/images/client2.jpg' :
+               req['email'] === 'client@cico.com' ? '/images/client.jpg' :
+               req['role'] === 'Staff' ? '/images/staff.jpg' : '/images/admin.jpg'
+      })))
+    );
   }
 
   async addPasswordRequest(reqData: any) {
@@ -213,25 +220,28 @@ export class DatabaseService {
       map(([clients, staff, admins]) => {
         const clientUsers = clients.map((c: any) => ({
           id: c.id,
-          name: c.name || c.email || 'Unknown Client',
-          email: c.email || '',
-          phone: c.phone || '09000000000',
+          name: c['name'] || c['email'] || 'Unknown Client',
+          email: c['email'] || '',
+          phone: c['phone'] || '09000000000',
           role: 'Client',
-          status: c.status || 'Active'
+          status: c['status'] || 'Active',
+          image: c['email'] === 'client2@cico.com' ? '/images/client2.jpg' : '/images/client.jpg'
         }));
         const staffUsers = staff.map((s: any) => ({
           id: s.id,
-          name: s.name || s.email || 'Unknown Staff',
-          email: s.email || '',
+          name: s['name'] || s['email'] || 'Unknown Staff',
+          email: s['email'] || '',
           role: 'Staff',
-          status: s.status || 'Active'
+          status: s['status'] || 'Active',
+          image: '/images/staff.jpg'
         }));
         const adminUsers = admins.map((a: any) => ({
           id: a.id,
-          name: a.name || a.email || 'Unknown Admin',
-          email: a.email || '',
+          name: a['name'] || a['email'] || 'Unknown Admin',
+          email: a['email'] || '',
           role: 'Admin',
-          status: a.status || 'Active'
+          status: a['status'] || 'Active',
+          image: '/images/admin.jpg'
         }));
         return [...clientUsers, ...staffUsers, ...adminUsers];
       })
@@ -255,5 +265,9 @@ export class DatabaseService {
 
     // Reset System Reserves
     await setDoc(doc(this.firestore, 'system/config'), { total_reserves: 1200000 });
+
+    // Ensure staff and admin exist
+    await setDoc(doc(this.firestore, 'staff/staff_1'), { name: 'Cindy Ma. Lala', email: 'staff@cico.com', role: 'Staff', status: 'Active' });
+    await setDoc(doc(this.firestore, 'admin/admin_1'), { name: 'Hawk M. Beat', email: 'admin@cico.com', role: 'Admin', status: 'Active' });
   }
 }

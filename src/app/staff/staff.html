@@ -7,9 +7,9 @@
     </div>
 
     <div class="profile-card">
-      <img src="/images/staff.jpg" class="avatar-sm" alt="Staff Avatar">
+      <img [src]="userImage" class="avatar-sm" [alt]="userName">
       <div class="info">
-        <p class="name">Cindy Ma. Lala</p>
+        <p class="name">{{ userName }}</p>
         <p class="role">Banking Associate II</p>
       </div>
     </div>
@@ -48,7 +48,7 @@
     <header class="command-header">
       <div>
         <h1>Banking Operations</h1>
-        <p class="text-muted">Logged in as Cindy Ma. Lala</p>
+        <p class="text-muted">Logged in as {{ userName }}</p>
       </div>
       <div class="header-actions">
         <div class="stat-pill clickable" routerLink="/transactions" title="View all pendings"><span class="label">Pending:</span> <span class="val warning">{{ stats.pending }}</span></div>
@@ -69,9 +69,7 @@
                class="queue-item" 
                [class.active]="selectedTx?.id === tx.id"
                (click)="selectTx(tx)">
-            <div class="q-icon" [ngClass]="tx.category === 'Deposit' ? 'deposit' : 'alert'">
-              {{ tx.icon || (tx.title ? tx.title.charAt(0) : 'T') }}
-            </div>
+            <img [src]="tx.image" class="avatar-queue" [alt]="tx.title">
             <div class="q-details">
               <h4>{{ tx.category || 'Transfer' }}</h4>
               <p>{{ tx.title || 'Unknown Client' }}</p>

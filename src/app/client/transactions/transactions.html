@@ -7,7 +7,7 @@
     </div>
 
     <div class="profile-card">
-      <img src="/images/client.jpg" class="avatar-sm" alt="Client Avatar">
+      <img [src]="currentUserImage" class="avatar-sm" [alt]="currentUserName">
       <div class="info">
         <p class="name">{{ currentUserName }}</p>
         <p class="role">Premium Client</p>
@@ -56,7 +56,7 @@
       <div class="section-header-row">
         <div class="search-box-unified">
           <span class="search-icon">🔍</span>
-          <input type="text" placeholder="Search transactions..." [(ngModel)]="searchQuery" (input)="applyFilters()">
+          <input type="text" placeholder="Search transactions..." [(ngModel)]="searchQuery">
         </div>
         <div class="filter-chips-unified">
           <button class="chip" [class.active]="filterType === 'All'" (click)="setFilter('All')">All</button>
@@ -76,8 +76,8 @@
               <th>Amount</th>
             </tr>
           </thead>
-          <tbody>
-            <tr *ngFor="let tx of filteredTransactions">
+          <tbody *ngIf="transactions$ | async as txs">
+            <tr *ngFor="let tx of getFiltered(txs)">
               <td>{{ tx.time || (tx.timestamp | date:'short') }}</td>
               <td class="font-medium">
                 {{ tx.title }}
@@ -87,8 +87,13 @@
               <td><span class="badge" [ngClass]="getStatusClass(tx.status)">{{ tx.status }}</span></td>
               <td class="amount-cell" [ngClass]="(tx.amount || '').includes('+') ? 'positive' : 'negative'">{{ tx.amount }}</td>
             </tr>
-            <tr *ngIf="filteredTransactions.length === 0">
+            <tr *ngIf="getFiltered(txs).length === 0">
               <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">No transactions found.</td>
+            </tr>
+          </tbody>
+          <tbody *ngIf="!(transactions$ | async)">
+            <tr>
+              <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">Loading transactions...</td>
             </tr>
           </tbody>
         </table>

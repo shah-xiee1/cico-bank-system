@@ -7,7 +7,7 @@
     </div>
 
     <div class="profile-card">
-      <img src="/images/client.jpg" class="avatar-sm" alt="Client Avatar">
+      <img [src]="currentUserImage" class="avatar-sm" [alt]="currentUserName">
       <div class="info">
         <p class="name">{{ currentUserName }}</p>
         <p class="role">Premium Client</p>

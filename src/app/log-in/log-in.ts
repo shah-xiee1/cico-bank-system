@@ -28,12 +28,12 @@ export class LogIn {
 
     if (userEmail === 'admin@cico.com' && this.password === 'admin123') {
       localStorage.setItem('currentUser', 'admin_1');
-      localStorage.setItem('currentUserName', 'System Admin');
+      localStorage.setItem('currentUserName', 'Hawk M. Beat');
       localStorage.setItem('currentUserRole', 'Admin');
       this.router.navigate(['/admin']);
     } else if (userEmail === 'staff@cico.com' && this.password === 'staff123') {
       localStorage.setItem('currentUser', 'staff_1');
-      localStorage.setItem('currentUserName', 'CICO Staff');
+      localStorage.setItem('currentUserName', 'Cindy Ma. Lala');
       localStorage.setItem('currentUserRole', 'Staff');
       this.router.navigate(['/staff']);
     } else if (userEmail === 'client@cico.com' && this.password === 'client123') {
@@ -46,7 +46,8 @@ export class LogIn {
       localStorage.setItem('currentUserName', 'Jane Doe');
       localStorage.setItem('currentUserRole', 'Client');
       this.router.navigate(['/client']);
-    } else {
+    }
+ else {
       alert('Invalid email or password');
     }
   }

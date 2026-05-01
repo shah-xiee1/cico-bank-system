@@ -16,6 +16,8 @@ export class StaffComponent implements OnInit {
   private router = inject(Router);
 
   currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  userName: string = 'Staff';
+  userImage: string = '/images/staff.jpg';
   
   pendingTransactions$: Observable<any[]> = new Observable();
   selectedTx: any = null;
@@ -27,6 +29,8 @@ export class StaffComponent implements OnInit {
   };
 
   ngOnInit() {
+    this.userName = localStorage.getItem('currentUserName') || 'Cindy Ma. Lala';
+    this.userImage = '/images/staff.jpg';
     this.pendingTransactions$ = this.dbService.getTransactions().pipe(
       map(txs => {
         const pending = txs.filter(tx => tx.status === 'Pending');
@@ -48,7 +52,10 @@ export class StaffComponent implements OnInit {
           else this.selectedTx = pending.length > 0 ? pending[0] : null;
         }
         
-        return pending;
+        return pending.map(tx => ({
+          ...tx,
+          image: tx.senderId === 'jane_doe' ? '/images/client2.jpg' : '/images/client.jpg'
+        }));
       })
     );
   }
@@ -59,14 +66,14 @@ export class StaffComponent implements OnInit {
 
   async approveTx() {
     if (this.selectedTx?.id) {
-      await this.dbService.updateTransactionStatus(this.selectedTx.id, 'Approved', 'Cindy Ma. Lala');
+      await this.dbService.updateTransactionStatus(this.selectedTx.id, 'Approved', this.userName);
       // Selection will be updated by the observable
     }
   }
 
   async rejectTx() {
     if (this.selectedTx?.id) {
-      await this.dbService.updateTransactionStatus(this.selectedTx.id, 'Rejected', 'Cindy Ma. Lala');
+      await this.dbService.updateTransactionStatus(this.selectedTx.id, 'Rejected', this.userName);
     }
   }
 }

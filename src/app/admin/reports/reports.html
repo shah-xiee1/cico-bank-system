@@ -7,9 +7,9 @@
     </div>
 
     <div class="profile-card">
-      <img src="/images/admin.jpg" class="avatar-sm" alt="Admin Avatar">
+      <img [src]="userImage" class="avatar-sm" [alt]="userName">
       <div class="info">
-        <p class="name">Hawk M. Beat</p>
+        <p class="name">{{ userName }}</p>
         <p class="role">System Root</p>
       </div>
     </div>
@@ -131,7 +131,10 @@
           </thead>
           <tbody>
             <tr *ngFor="let req of requests">
-              <td><p class="log-title">{{ req.user }}</p></td>
+              <td class="user-cell">
+                <img [src]="req.image" class="avatar-table" [alt]="req.user">
+                <p class="log-title">{{ req.user }}</p>
+              </td>
               <td>{{ req.email }}</td>
               <td><span class="tag" [ngClass]="(req.role || '').toLowerCase()">{{ req.role || 'User' }}</span></td>
               <td class="ts">{{ req.date }}</td>
@@ -238,51 +241,6 @@
                     <path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"></path>
                   </svg>
                   <p>No notifications recorded yet. Activity will appear here automatically.</p>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-    <!-- ── SYSTEM FUNDS LEDGER ── -->
-    <div class="solid-card mt-20" *ngIf="systemHistory$ | async as history">
-      <div class="card-title-border">
-        <h3>System Funds Ledger</h3>
-        <p class="text-muted" style="font-size: 0.75rem;">Audit trail of platform liquidity changes</p>
-      </div>
-      <div class="table-wrapper-unified">
-        <table class="logs-table">
-          <thead>
-            <tr>
-              <th>Entry Type</th>
-              <th>Impact</th>
-              <th>Reference ID</th>
-              <th>Date &amp; Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let entry of history">
-              <td>
-                <span class="tag" [ngClass]="entry.type === 'Credit' ? 'tag-staff' : 'tag-admin'">
-                  {{ entry.type }}
-                </span>
-              </td>
-              <td>
-                <strong [style.color]="entry.type === 'Credit' ? '#10b981' : '#ef4444'">
-                  {{ entry.type === 'Credit' ? '+' : '-' }} ₱ {{ entry.amount | number }}
-                </strong>
-              </td>
-              <td class="source">{{ entry.id }}</td>
-              <td class="ts">{{ entry.date }}</td>
-            </tr>
-            <tr *ngIf="history.length === 0">
-              <td colspan="4" class="no-results">
-                <div class="empty-state">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="48" height="48" class="text-muted">
-                    <rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line>
-                  </svg>
-                  <p>No fund adjustments recorded in the ledger yet.</p>
                 </div>
               </td>
             </tr>

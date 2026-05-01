@@ -19,7 +19,9 @@ export class Reports implements OnInit {
   passwordRequests$!: Observable<any[]>;
   notifications$!: Observable<any[]>;
   allTransactions$!: Observable<any[]>;
-  systemHistory$!: Observable<any[]>;
+  
+  userName: string = 'Admin';
+  userImage: string = '/images/admin.jpg';
 
   // Stats derived from transactions
   stats$!: Observable<{ total: number; pending: number; approved: number; rejected: number }>;
@@ -29,10 +31,11 @@ export class Reports implements OnInit {
   filteredNotifications$!: Observable<any[]>;
 
   ngOnInit() {
+    this.userName = localStorage.getItem('currentUserName') || 'Hawk M. Beat';
+    this.userImage = '/images/admin.jpg';
     this.passwordRequests$ = this.dbService.getPasswordRequests();
     this.allTransactions$  = this.dbService.getTransactions();
     this.notifications$    = this.dbService.getNotifications();
-    this.systemHistory$    = this.dbService.getSystemHistory();
 
     // Stats from transactions
     this.stats$ = this.allTransactions$.pipe(

@@ -229,3 +229,17 @@
 @media (max-width: 640px) {
   .report-stats-row { grid-template-columns: 1fr; }
 }
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar-table {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border-main);
+}

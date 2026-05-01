@@ -18,66 +18,68 @@ export class ClientTransactionsComponent implements OnInit {
   searchQuery = '';
   filterType = 'All';
   
-  allTransactions: any[] = [];
-  filteredTransactions: any[] = [];
-
-  currentUserId = 'excel_john';
-  currentUserName = 'Excel John';
+  transactions$!: Observable<any[]>;
+  currentUserId: string = 'excel_john';
+  currentUserName: string = 'Excel John';
+  currentUserImage: string = '/images/client.jpg';
 
   ngOnInit() {
     this.currentUserId = localStorage.getItem('currentUser') || 'excel_john';
     this.currentUserName = localStorage.getItem('currentUserName') || 'Excel John';
+    this.currentUserImage = this.currentUserId === 'jane_doe' ? '/images/client2.jpg' : '/images/client.jpg';
 
-    this.dbService.getTransactions().subscribe(txs => {
-      // Filter transactions for current user
-      const userTxs = txs.filter(tx => tx.senderId === this.currentUserId || tx.recipientId === this.currentUserId || (!tx.senderId && !tx.recipientId));
-      
-      this.allTransactions = userTxs.map(tx => {
-        let dateStr = tx.time || 'Unknown Date';
-        if (!tx.time && tx.timestamp) {
-          const d = typeof tx.timestamp === 'number' ? new Date(tx.timestamp) : (tx.timestamp.toDate ? tx.timestamp.toDate() : new Date(tx.timestamp));
-          dateStr = d.toLocaleString();
-        }
-        
-        let displayAmount = tx.amount || '';
-        let displayTitle = tx.title || '';
-        // If current user is the recipient, show as income and swap title
-        if (tx.recipientId === this.currentUserId) {
+    this.transactions$ = this.dbService.getTransactions().pipe(
+      map(txs => {
+        // Filter for current user
+        const userTxs = txs.filter(tx => 
+          tx.senderId === this.currentUserId || 
+          tx.recipientId === this.currentUserId || 
+          (!tx.senderId && !tx.recipientId)
+        );
+
+        return userTxs.map(tx => {
+          let dateStr = tx.time || 'Unknown Date';
+          if (!tx.time && tx.timestamp) {
+            const d = typeof tx.timestamp === 'number' ? new Date(tx.timestamp) : (tx.timestamp.toDate ? tx.timestamp.toDate() : new Date(tx.timestamp));
+            dateStr = d.toLocaleString();
+          }
+          
+          let displayAmount = tx.amount || '';
+          let displayTitle = tx.title || '';
+          
+          if (tx.recipientId === this.currentUserId) {
             if (displayAmount.includes('-')) {
-                displayAmount = displayAmount.replace('-', '+');
+              displayAmount = displayAmount.replace('-', '+');
             }
             if (tx.senderId === 'excel_john') displayTitle = 'Excel John (client@cico.com)';
             else if (tx.senderId === 'jane_doe') displayTitle = 'Jane Doe (client2@cico.com)';
             else displayTitle = 'Incoming Transfer';
-        }
+          }
 
-        return { ...tx, time: dateStr, amount: displayAmount, title: displayTitle };
-      });
-      this.applyFilters();
+          return { ...tx, time: dateStr, amount: displayAmount, title: displayTitle };
+        }).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      })
+    );
+  }
+
+  getFiltered(txs: any[]): any[] {
+    return txs.filter(tx => {
+      const q = this.searchQuery.toLowerCase();
+      const matchSearch = !q || 
+        (tx.title || '').toLowerCase().includes(q) || 
+        (tx.reference || '').toLowerCase().includes(q) ||
+        (tx.category || '').toLowerCase().includes(q);
+      
+      const matchType = this.filterType === 'All' || 
+        (this.filterType === 'Income' && (tx.amount || '').includes('+')) ||
+        (this.filterType === 'Expenses' && (tx.amount || '').includes('-'));
+
+      return matchSearch && matchType;
     });
   }
 
   setFilter(type: string) {
     this.filterType = type;
-    this.applyFilters();
-  }
-
-  applyFilters() {
-    this.filteredTransactions = this.allTransactions
-      .filter(tx => {
-        const q = this.searchQuery.toLowerCase();
-        const matchSearch = !q || 
-          (tx.title || '').toLowerCase().includes(q) || 
-          (tx.reference || '').toLowerCase().includes(q) ||
-          (tx.category || '').toLowerCase().includes(q);
-        
-        const matchType = this.filterType === 'All' || 
-          (this.filterType === 'Income' && (tx.amount || '').includes('+')) ||
-          (this.filterType === 'Expenses' && (tx.amount || '').includes('-'));
-
-        return matchSearch && matchType;
-      })
-      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   }
 
   getStatusClass(status: string) {

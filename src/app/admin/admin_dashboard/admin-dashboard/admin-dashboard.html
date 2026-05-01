@@ -7,9 +7,9 @@
     </div>
 
     <div class="profile-card">
-      <img src="/images/admin.jpg" class="avatar-sm" alt="Admin Avatar">
+      <img [src]="userImage" class="avatar-sm" [alt]="userName">
       <div class="info">
-        <p class="name">Hawk M. Beat</p>
+        <p class="name">{{ userName }}</p>
         <p class="role">System Root</p>
       </div>
     </div>
@@ -171,7 +171,10 @@
           </thead>
           <tbody>
             <tr *ngFor="let user of users$ | async">
-              <td><p class="log-title">{{ user.name }}</p></td>
+              <td class="user-cell">
+                <img [src]="user.image" class="avatar-table" [alt]="user.name">
+                <p class="log-title">{{ user.name }}</p>
+              </td>
               <td>{{ user.email }}</td>
               <td><span class="tag" [ngClass]="user.role.toLowerCase()">{{ user.role }}</span></td>
               <td><span class="status-badge success">{{ user.status }}</span></td>

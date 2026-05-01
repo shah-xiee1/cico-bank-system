@@ -7,9 +7,9 @@
     </div>
 
     <div class="profile-card">
-      <img src="/images/staff.jpg" class="avatar-sm" alt="Staff Avatar">
+      <img [src]="userImage" class="avatar-sm" [alt]="userName">
       <div class="info">
-        <p class="name">Cindy Ma. Lala</p>
+        <p class="name">{{ userName }}</p>
         <p class="role">Banking Associate II</p>
       </div>
     </div>
@@ -104,8 +104,13 @@
               <tr *ngFor="let tx of getFiltered(allTxs)" class="tx-row" (click)="openModal(tx)">
                 <td class="ts">{{ tx.date }}</td>
                 <td>
-                  <p class="log-title">{{ tx.client }}</p>
-                  <p class="log-desc">{{ tx.desc }}</p>
+                  <div class="user-cell">
+                    <img [src]="tx.image" class="avatar-table" [alt]="tx.client">
+                    <div>
+                      <p class="log-title">{{ tx.client }}</p>
+                      <p class="log-desc">{{ tx.desc }}</p>
+                    </div>
+                  </div>
                 </td>
                 <td><span class="tag" [ngClass]="tx.typeClass">{{ tx.type }}</span></td>
                 <td class="tx-val" [ngClass]="tx.amountClass">{{ tx.amount }}</td>

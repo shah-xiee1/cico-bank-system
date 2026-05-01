@@ -22,8 +22,13 @@ export class AdminDashboardComponent implements OnInit {
   systemAnalytics$: Observable<any> = new Observable();
   systemStats$: Observable<any> = new Observable();
   users$: Observable<any[]> = new Observable();
+  
+  userName: string = 'Admin';
+  userImage: string = '/images/admin.jpg';
 
   ngOnInit() {
+    this.userName = localStorage.getItem('currentUserName') || 'Hawk M. Beat';
+    this.userImage = '/images/admin.jpg';
     this.dbService.initSystemConfig();
     this.users$ = this.dbService.getUsers();
     
