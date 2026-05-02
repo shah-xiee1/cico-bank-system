@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -11,7 +11,9 @@ import { DatabaseService } from '../services/database.service';
   templateUrl: './log-in.html',
   styleUrls: ['./log-in.css']
 })
-export class LogIn {
+export class LogIn implements AfterViewInit {
+
+  @ViewChild('bgVideo') bgVideo!: ElementRef<HTMLVideoElement>;
 
   private router = inject(Router);
   private dbService = inject(DatabaseService);
@@ -22,6 +24,15 @@ export class LogIn {
   showForgotModal: boolean = false;
   recoverySent: boolean = false;
   forgotEmail: string = '';
+
+  ngAfterViewInit() {
+    if (this.bgVideo && this.bgVideo.nativeElement) {
+      this.bgVideo.nativeElement.muted = true;
+      this.bgVideo.nativeElement.play().catch(error => {
+        console.error("Autoplay failed:", error);
+      });
+    }
+  }
 
   login() {
     const userEmail = this.email.toLowerCase().trim();
