@@ -172,6 +172,10 @@ input:focus {
   transform: translateX(4px);
 }
 
+.login-btn:active {
+  transform: scale(0.97);
+}
+
 .footer-links {
   margin-top: 20px;
   text-align: center;

@@ -126,6 +126,8 @@
   line-height: 1.5;
   box-shadow: 0 4px 15px rgba(0,0,0,0.03);
   position: relative;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .message-row.client .message-bubble {

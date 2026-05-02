@@ -284,6 +284,10 @@
   transform: translateY(-2px);
 }
 
+.btn-large:active {
+  transform: scale(0.97);
+}
+
 .no-selection-state {
   display: flex;
   align-items: center;

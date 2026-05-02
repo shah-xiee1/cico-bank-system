@@ -36,6 +36,7 @@ export class ClientComponent implements OnInit {
   otherClients$!: Observable<any[]>;
   currentUserPhone$!: Observable<string>;
   fullPhone$!: Observable<string>;
+  currentBalanceNumeric: number = 0;
 
   ngOnInit() {
     this.currentUserId = localStorage.getItem('currentUser') || 'excel_john';
@@ -85,7 +86,11 @@ export class ClientComponent implements OnInit {
       map((txs: any[]) => txs.sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0)))
     );
     this.balance$ = this.dbService.getClientBalance(this.currentUserId).pipe(
-      map((data: any) => data?.balance ?? 25000)
+      map((data: any) => {
+        const bal = data?.balance ?? 25000;
+        this.currentBalanceNumeric = bal;
+        return bal;
+      })
     );
     this.otherClients$ = this.dbService.getUsers().pipe(
       map((users: any[]) => users.filter((u: any) => u.role === 'Client' && u.id !== this.currentUserId))
@@ -134,9 +139,26 @@ export class ClientComponent implements OnInit {
     }
   }
 
-  initiateTransaction(type: string, amount: string, primary: string, secondary: string = '') {
+  async initiateTransaction(type: string, amount: string, primary: string, secondary: string = '') {
     if(!amount || !primary) {
       alert('Please fill out all required fields.');
+      return;
+    }
+
+    const numericAmount = parseFloat(amount.replace(/,/g, '')) || 0;
+    
+    // Check for insufficient funds
+    if (type === 'send' && numericAmount > this.currentBalanceNumeric) {
+      alert(`Insufficient funds! Your current balance is ₱ ${this.currentBalanceNumeric.toLocaleString()}. You cannot send ₱ ${numericAmount.toLocaleString()}.`);
+      return;
+    }
+
+    // Check for Global Transfer Limit
+    const config = await firstValueFrom(this.dbService.getSystemConfig());
+    const limit = parseFloat(config?.transferLimit?.toString().replace(/,/g, '')) || 500000;
+
+    if (type === 'send' && numericAmount > limit) {
+      alert(`Transaction Denied! The global transfer limit is ₱ ${limit.toLocaleString()}. Please reduce your amount.`);
       return;
     }
 
@@ -161,11 +183,15 @@ export class ClientComponent implements OnInit {
 
     const { type, amount, primary, secondary } = this.pendingTxDetails;
 
+    // Optimistic Update: Close modal immediately
+    this.closeModals();
+    alert(`${type} transaction submitted and pending approval.`);
+    this.router.navigate(['/client/transactions']);
+
     let targetRecipientId: string | null = null;
     let finalTitle = '';
 
     if (type === 'send') {
-      // primary is phone number
       const clients = await firstValueFrom(this.otherClients$);
       const target = clients.find(c => (c.phone || '').replace(/\s/g, '') === primary.replace(/\s/g, ''));
       if (target) {
@@ -175,7 +201,6 @@ export class ClientComponent implements OnInit {
         finalTitle = `${primary} (Transfer)`;
       }
     } else {
-      // Deposit: primary=method, secondary=phone
       finalTitle = `${primary} (${secondary})`;
     }
 
@@ -189,13 +214,10 @@ export class ClientComponent implements OnInit {
       category: type === 'deposit' ? 'Deposit' : 'Transfer',
       reference: 'TXN-' + Math.floor(Math.random() * 1000000),
       senderId: this.currentUserId,
-      recipientId: targetRecipientId
+      recipientId: targetRecipientId,
+      timestamp: new Date().getTime()
     };
 
     await this.dbService.addTransaction(txData);
-    this.closeModals();
-    alert(`${type} transaction submitted and pending approval.`);
-    // Navigate to transaction history instead of staff
-    this.router.navigate(['/client/transactions']);
   }
 }

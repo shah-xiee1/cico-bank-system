@@ -77,7 +77,7 @@ export class Transactions implements OnInit {
             timestamp: tx.timestamp || 0,
             image: sender ? sender.image : '/images/client.jpg',
             senderName: sender ? sender.name : (tx.senderId || 'System'),
-            recipientName: recipient ? recipient.name : (tx.title || 'N/A')
+            recipientName: tx.category === 'Service Fee' ? 'CICO Bank (Fee)' : (recipient ? recipient.name : (tx.title || 'N/A'))
           };
         });
 
@@ -101,6 +101,7 @@ export class Transactions implements OnInit {
     if (category === 'Deposit' || category === 'Income' || category === 'Remittance') return 'tag-deposit';
     if (category === 'Transfer') return 'tag-transfer';
     if (category === 'Cash-Out') return 'tag-cashout';
+    if (category === 'Service Fee') return 'tag-fee';
     return 'tag-payment';
   }
 
@@ -117,15 +118,16 @@ export class Transactions implements OnInit {
 
   async approveTx(tx: TxData) {
     if (tx.id) {
-      await this.dbService.updateTransactionStatus(tx.id, 'Approved', this.userName);
+      // Close immediately for snappy UI
       if (this.selectedTx?.id === tx.id) this.closeModal();
+      await this.dbService.updateTransactionStatus(tx.id, 'Approved', this.userName);
     }
   }
 
   async rejectTx(tx: TxData) {
     if (tx.id) {
-      await this.dbService.updateTransactionStatus(tx.id, 'Rejected', this.userName);
       if (this.selectedTx?.id === tx.id) this.closeModal();
+      await this.dbService.updateTransactionStatus(tx.id, 'Rejected', this.userName);
     }
   }
 

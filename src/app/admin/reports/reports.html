@@ -129,10 +129,11 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let req of requests">
+            <tr *ngFor="let req of requests; let i = index">
               <td class="user-cell">
+                <span *ngIf="i === 0" class="badge" style="font-size:0.6rem; padding: 2px 6px; margin-right: 5px; background: var(--primary); color: white;">Latest</span>
                 <img [src]="req.image" class="avatar-table" [alt]="req.user">
-                <p class="log-title">{{ req.user }}</p>
+                <p class="log-title" style="display:inline-block; margin:0;">{{ req.user }}</p>
               </td>
               <td>{{ req.email }}</td>
               <td><span class="tag" [ngClass]="(req.role || '').toLowerCase()">{{ req.role || 'User' }}</span></td>

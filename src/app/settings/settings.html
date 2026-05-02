@@ -7,9 +7,9 @@
     </div>
 
     <div class="profile-card">
-      <img src="/images/admin.jpg" class="avatar-sm" alt="Admin Avatar">
+      <img [src]="userImage" class="avatar-sm" [alt]="userName">
       <div class="info">
-        <p class="name">Hawk M. Beat</p>
+        <p class="name">{{ userName }}</p>
         <p class="role">System Root</p>
       </div>
     </div>
@@ -73,43 +73,101 @@
       </div>
     </header>
 
-    <div class="solid-card settings-panel">
-      <div class="setting-group">
-        <div class="setting-info">
-          <h3>Two-Factor Authentication (2FA)</h3>
-          <p>Require 2FA for all administrative accounts.</p>
+    <ng-container *ngIf="config$ | async as c">
+      <div class="settings-grid">
+        <!-- Section 1: Security & Access -->
+        <div class="solid-card settings-card">
+          <div class="card-title-border">
+            <h3>Platform Security</h3>
+          </div>
+          <div class="settings-body">
+            <div class="setting-row">
+              <div class="setting-info">
+                <p class="s-label">Two-Factor Authentication (2FA)</p>
+                <p class="s-desc">Require 2FA for all administrative accounts.</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" #twoFactor [checked]="c.twoFactor">
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div class="setting-row">
+              <div class="setting-info">
+                <p class="s-label">Session Timeout</p>
+                <p class="s-desc">Auto-logout idle sessions after 15 minutes.</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" checked disabled>
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
         </div>
-        <label class="switch">
-          <input type="checkbox" checked>
-          <span class="slider round"></span>
-        </label>
+
+        <!-- Section 2: Financial Policies -->
+        <div class="solid-card settings-card">
+          <div class="card-title-border">
+            <h3>Financial Policies</h3>
+          </div>
+          <div class="settings-body">
+            <div class="setting-input-group">
+              <label>Global Transfer Limit (Per Transaction)</label>
+              <div class="input-with-icon">
+                <span class="prefix">₱</span>
+                <input type="text" #tLimit [value]="(c.transferLimit || 500000) | number:'1.0-0'" (input)="formatAmount($event)">
+              </div>
+            </div>
+            <div class="setting-input-group">
+              <label>Interest Rate (Annual Savings)</label>
+              <div class="input-with-icon">
+                <span class="suffix">%</span>
+                <input type="text" #iRate [value]="c.interestRate || 4.50" (input)="formatAmount($event)">
+              </div>
+            </div>
+            <div class="setting-input-group">
+              <label>Standard Transfer Fee</label>
+              <div class="input-with-icon">
+                <span class="prefix">₱</span>
+                <input type="text" #tFee [value]="(c.transferFee || 15.00) | number:'1.0-2'" (input)="formatAmount($event)">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Staff & Operations -->
+        <div class="solid-card settings-card">
+          <div class="card-title-border">
+            <h3>System Operations</h3>
+          </div>
+          <div class="settings-body">
+            <div class="setting-row">
+              <div class="setting-info">
+                <p class="s-label">Maintenance Mode</p>
+                <p class="s-desc">Suspend client logins for system upgrades.</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" #mMode [checked]="c.maintenance">
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="setting-group">
-        <div class="setting-info">
-          <h3>Maintenance Mode</h3>
-          <p>Suspend client logins during system upgrades.</p>
-        </div>
-        <label class="switch">
-          <input type="checkbox">
-          <span class="slider round"></span>
-        </label>
+      <div class="settings-footer-actions">
+        <p class="audit-text">Last modified by <strong>{{ userName }}</strong> on May 2, 2026 at 08:05 PM</p>
+        <button class="btn-primary-large" 
+          (click)="saveSettings({
+            twoFactor: twoFactor.checked,
+            transferLimit: tLimit.value,
+            interestRate: iRate.value,
+            transferFee: tFee.value,
+            maintenance: mMode.checked
+          })" 
+          [disabled]="isSaving">
+          {{ isSaving ? 'Updating Platform...' : 'Save Global Changes' }}
+        </button>
       </div>
-
-      <div class="setting-group borderless">
-        <div class="setting-info">
-          <h3>Global Transfer Limit</h3>
-          <p>Maximum amount allowed per transaction.</p>
-        </div>
-        <div class="setting-input-box">
-          <span class="currency-symbol">₱</span>
-          <input type="text" class="number-input" value="500,000">
-        </div>
-      </div>
-
-      <div class="settings-actions">
-        <button class="btn-primary">Save Changes</button>
-      </div>
-    </div>
+    </ng-container>
   </main>
 </div>

@@ -38,9 +38,13 @@ export class DatabaseService {
     if (processedBy) updateData.processedBy = processedBy;
     await updateDoc(txDocRef, updateData);
 
-    // Adjust client balance on approval
+    // Adjust client balance and apply fees on approval
     if (newStatus === 'Approved') {
       const txSnap = await getDoc(txDocRef);
+      const configSnap = await getDoc(doc(this.firestore, 'system/config'));
+      const config = configSnap.data() || {};
+      const transferFee = parseFloat(config['transferFee']?.toString().replace(/,/g, '')) || 0;
+
       if (txSnap.exists()) {
         const txData = txSnap.data();
         const amountStr: string = txData['amount'] || '0';
@@ -52,7 +56,28 @@ export class DatabaseService {
         const isTransfer = txData['category'] === 'Transfer';
 
         if (isTransfer) {
-          if (senderId) await this.adjustBalance(senderId, -numericAmount);
+          // Deduct Amount + Fee from sender
+          if (senderId) {
+            await this.adjustBalance(senderId, -(numericAmount + transferFee));
+            if (transferFee > 0) {
+              await this.logSystemActivity('Service Fee', transferFee);
+              // Create a visible fee transaction for the client
+              await this.addTransaction({
+                title: `Service Fee (Ref: ${txData['reference'] || 'TXN'})`,
+                time: new Date().toLocaleString(),
+                amount: `- ₱ ${transferFee}`,
+                color: 'bg-red',
+                icon: 'F',
+                status: 'Approved',
+                category: 'Service Fee',
+                reference: 'FEE-' + Math.floor(Math.random() * 1000000),
+                senderId: senderId,
+                recipientId: 'SYSTEM',
+                timestamp: new Date().getTime(),
+                processedBy: processedBy || 'System (Auto)'
+              });
+            }
+          }
 
           if (recipientId) {
             // Client to client transfer
@@ -64,17 +89,6 @@ export class DatabaseService {
         } else if (isDeposit) {
           if (senderId) await this.adjustBalance(senderId, numericAmount);
           await this.logSystemActivity('Credit', numericAmount);
-        } else {
-          // Fallback for older legacy records
-          const isDebit = amountStr.includes('-');
-          const isDep = amountStr.includes('+');
-          if (isDebit && numericAmount > 0) {
-            await this.adjustBalance('excel_john', -numericAmount);
-            await this.logSystemActivity('Debit', numericAmount);
-          } else if (isDep && numericAmount > 0) {
-            await this.adjustBalance('excel_john', numericAmount);
-            await this.logSystemActivity('Credit', numericAmount);
-          }
         }
       }
     }
@@ -134,7 +148,8 @@ export class DatabaseService {
   // --- PASSWORD REQUESTS ---
   getPasswordRequests(): Observable<any[]> {
     const reqCollection = collection(this.firestore, 'password_requests');
-    return collectionData(reqCollection, { idField: 'id' }).pipe(
+    const q = query(reqCollection, orderBy('timestamp', 'desc'));
+    return collectionData(q, { idField: 'id' }).pipe(
       map(requests => requests.map(req => ({
         ...req,
         image: req['email'] === 'client2@cico.com' ? '/images/client2.jpg' :
@@ -157,17 +172,31 @@ export class DatabaseService {
     return deleteDoc(reqDocRef);
   }
 
-  // --- SYSTEM STATS ---
-  getSystemReserves(): Observable<any> {
-    const reservesDoc = doc(this.firestore, 'system/config');
-    return docData(reservesDoc);
+  // --- SYSTEM CONFIG ---
+  getSystemConfig(): Observable<any> {
+    const configDoc = doc(this.firestore, 'system/config');
+    return docData(configDoc);
+  }
+
+  async updateSystemConfig(data: any) {
+    const configDoc = doc(this.firestore, 'system/config');
+    await setDoc(configDoc, data, { merge: true });
   }
 
   async initSystemConfig() {
-    const reservesDoc = doc(this.firestore, 'system/config');
-    const snap = await getDoc(reservesDoc);
+    const configDoc = doc(this.firestore, 'system/config');
+    const snap = await getDoc(configDoc);
     if (!snap.exists()) {
-      await setDoc(reservesDoc, { total_reserves: 1200000 });
+      await setDoc(configDoc, { 
+        total_reserves: 1200000,
+        twoFactor: true,
+        maintenance: false,
+        transferLimit: 500000,
+        interestRate: 4.50,
+        transferFee: 15.00,
+        staffAutoApprove: false,
+        verboseLogging: true
+      });
     }
   }
 
@@ -187,18 +216,19 @@ export class DatabaseService {
   }
 
   getSystemStats(): Observable<any> {
+    const clientsCol = collection(this.firestore, 'clients');
     return combineLatest([
       this.getNotifications(),
-      this.getClientBalance('excel_john'),
-      this.getSystemReserves(),
+      collectionData(clientsCol),
+      this.getSystemConfig(),
       this.getTransactions()
     ]).pipe(
-      map(([notifs, balData, reservesData, txs]) => {
-        const bal = balData?.balance ?? 25000;
+      map(([notifs, clients, reservesData, txs]) => {
+        const totalClientBalances = clients.reduce((acc, c: any) => acc + (c.balance || 0), 0);
         const reserves = reservesData?.total_reserves ?? 1200000;
         return {
           totalUsers: 4, // Excel, Jane, Admin, Staff
-          totalFunds: '₱ ' + (reserves + bal).toLocaleString(),
+          totalFunds: '₱ ' + (reserves + totalClientBalances).toLocaleString(),
           reports: notifs.length,
           totalTransactions: txs.length
         };
@@ -222,7 +252,7 @@ export class DatabaseService {
           id: c.id,
           name: c['name'] || c['email'] || 'Unknown Client',
           email: c['email'] || '',
-          phone: c['phone'] || '09000000000',
+          phone: c['phone'] || (c['email'] === 'client2@cico.com' ? '0918 987 6543' : '0917 123 4567'),
           role: 'Client',
           status: c['status'] || 'Active',
           image: c['email'] === 'client2@cico.com' ? '/images/client2.jpg' : '/images/client.jpg'
@@ -231,6 +261,7 @@ export class DatabaseService {
           id: s.id,
           name: s['name'] || s['email'] || 'Unknown Staff',
           email: s['email'] || '',
+          phone: s['phone'] || '0920 123 4567',
           role: 'Staff',
           status: s['status'] || 'Active',
           image: '/images/staff.jpg'
@@ -239,6 +270,7 @@ export class DatabaseService {
           id: a.id,
           name: a['name'] || a['email'] || 'Unknown Admin',
           email: a['email'] || '',
+          phone: a['phone'] || '0999 888 7777',
           role: 'Admin',
           status: a['status'] || 'Active',
           image: '/images/admin.jpg'
@@ -294,7 +326,7 @@ export class DatabaseService {
     await setDoc(doc(this.firestore, 'system/config'), { total_reserves: 1200000 });
 
     // Ensure staff and admin exist
-    await setDoc(doc(this.firestore, 'staff/staff_1'), { name: 'Cindy Ma. Lala', email: 'staff@cico.com', role: 'Staff', status: 'Active' });
-    await setDoc(doc(this.firestore, 'admin/admin_1'), { name: 'Hawk M. Beat', email: 'admin@cico.com', role: 'Admin', status: 'Active' });
+    await setDoc(doc(this.firestore, 'staff/staff_1'), { name: 'Cindy Ma. Lala', email: 'staff@cico.com', role: 'Staff', status: 'Active', phone: '0920 123 4567' });
+    await setDoc(doc(this.firestore, 'admin/admin_1'), { name: 'Hawk M. Beat', email: 'admin@cico.com', role: 'Admin', status: 'Active', phone: '0999 888 7777' });
   }
 }

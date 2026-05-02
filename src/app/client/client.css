@@ -129,6 +129,10 @@
   font-weight: 500;
 }
 
+.btn-primary:active, .action-circle-btn:active, .close-btn:active {
+  transform: scale(0.95);
+}
+
 /* RECENT ACTIVITY */
 .recent-activity {
   background: white;

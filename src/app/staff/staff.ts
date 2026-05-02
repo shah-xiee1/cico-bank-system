@@ -84,14 +84,18 @@ export class StaffComponent implements OnInit {
 
   async approveTx() {
     if (this.selectedTx?.id) {
-      await this.dbService.updateTransactionStatus(this.selectedTx.id, 'Approved', this.userName);
-      // Selection will be updated by the observable
+      const txId = this.selectedTx.id;
+      // Optimistic update: clear selection immediately
+      this.selectedTx = null;
+      await this.dbService.updateTransactionStatus(txId, 'Approved', this.userName);
     }
   }
 
   async rejectTx() {
     if (this.selectedTx?.id) {
-      await this.dbService.updateTransactionStatus(this.selectedTx.id, 'Rejected', this.userName);
+      const txId = this.selectedTx.id;
+      this.selectedTx = null;
+      await this.dbService.updateTransactionStatus(txId, 'Rejected', this.userName);
     }
   }
 }

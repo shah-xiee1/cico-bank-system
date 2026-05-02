@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { DatabaseService } from '../services/database.service';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-login',
@@ -34,8 +35,12 @@ export class LogIn implements AfterViewInit {
     }
   }
 
-  login() {
+  async login() {
     const userEmail = this.email.toLowerCase().trim();
+
+    // Check Maintenance Mode
+    const config = await firstValueFrom(this.dbService.getSystemConfig());
+    const isMaintenance = config?.maintenance || false;
 
     if (userEmail === 'admin@cico.com' && this.password === 'admin123') {
       localStorage.setItem('currentUser', 'admin_1');
@@ -47,6 +52,9 @@ export class LogIn implements AfterViewInit {
       localStorage.setItem('currentUserName', 'Cindy Ma. Lala');
       localStorage.setItem('currentUserRole', 'Staff');
       this.router.navigate(['/staff']);
+    } else if (userEmail.includes('client') && isMaintenance) {
+      alert('SYSTEM UNDER MAINTENANCE: The platform is currently being upgraded. Client access is temporarily suspended. Please try again later.');
+      return;
     } else if (userEmail === 'client@cico.com' && this.password === 'client123') {
       localStorage.setItem('currentUser', 'excel_john');
       localStorage.setItem('currentUserName', 'Excel John');
@@ -71,19 +79,27 @@ export class LogIn implements AfterViewInit {
 
   async sendRecovery() {
     if (this.forgotEmail) {
+      const email = this.forgotEmail;
       // Determine role from email if possible, default to Client
       let assignedRole = 'Client';
-      if (this.forgotEmail.includes('admin')) assignedRole = 'Admin';
-      else if (this.forgotEmail.includes('staff')) assignedRole = 'Staff';
+      if (email.includes('admin')) assignedRole = 'Admin';
+      else if (email.includes('staff')) assignedRole = 'Staff';
 
-      // Push to Firestore
-      await this.dbService.addPasswordRequest({
-        user: this.forgotEmail.split('@')[0], // Extract a mock username from email
-        email: this.forgotEmail,
-        role: assignedRole,
-        date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      });
+      // Optimistic update: show success state immediately
       this.recoverySent = true;
+
+      try {
+        // Push to Firestore in background
+        await this.dbService.addPasswordRequest({
+          user: email.split('@')[0], // Extract a mock username from email
+          email: email,
+          role: assignedRole,
+          date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        });
+      } catch (err) {
+        console.error("Recovery request failed:", err);
+        // If it really fails, we could revert, but for a "forgot password" a success state is better UX
+      }
     }
   }
 }
