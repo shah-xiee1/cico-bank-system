@@ -69,7 +69,6 @@
     <header class="command-header">
       <div>
         <h1>CICO Bank Administrator</h1>
-        <p class="text-muted">{{ currentDate }}</p>
       </div>
       <div>
         <button class="nav-btn" style="background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;" (click)="resetData()">
@@ -165,6 +164,7 @@
             <tr>
               <th>Name</th>
               <th>Email</th>
+              <th>Phone</th>
               <th>Role</th>
               <th>Status</th>
             </tr>
@@ -176,6 +176,7 @@
                 <p class="log-title">{{ user.name }}</p>
               </td>
               <td>{{ user.email }}</td>
+              <td><strong>{{ user.phone || 'N/A' }}</strong></td>
               <td><span class="tag" [ngClass]="user.role.toLowerCase()">{{ user.role }}</span></td>
               <td><span class="status-badge success">{{ user.status }}</span></td>
             </tr>

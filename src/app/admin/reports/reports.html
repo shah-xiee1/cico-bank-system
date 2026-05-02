@@ -69,7 +69,6 @@
     <header class="command-header">
       <div>
         <h1>System Reports</h1>
-        <p class="text-muted">Live feed of all client submissions and staff actions recorded in real-time</p>
       </div>
     </header>
 
@@ -160,9 +159,18 @@
     </div>
 
     <!-- ── ALL TRANSACTIONS OVERVIEW ── -->
-    <div class="solid-card mt-20" *ngIf="allTransactions$ | async as txs">
-      <div class="card-title-border">
+    <div class="solid-card mt-20" *ngIf="filteredTransactions$ | async as txs">
+      <div class="card-title-border report-card-header">
         <h3>All Transactions Overview</h3>
+        <div class="search-container">
+          <span class="search-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </span>
+          <input type="text" class="search-input" placeholder="Search transactions..." (input)="onSearch($event)">
+        </div>
       </div>
       <div class="table-wrapper-unified">
         <table class="logs-table">

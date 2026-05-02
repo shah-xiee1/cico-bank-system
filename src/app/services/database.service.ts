@@ -251,17 +251,16 @@ export class DatabaseService {
   // --- MESSAGES (Support Chat) ---
   getMessages(clientId: string): Observable<any[]> {
     const msgCollection = collection(this.firestore, 'messages');
-    return collectionData(msgCollection, { idField: 'id' }).pipe(
-      map(msgs => msgs.filter(m => m['clientId'] === clientId)
-                      .sort((a, b) => a['timestamp'] - b['timestamp']))
+    const q = query(msgCollection, orderBy('timestamp', 'asc'));
+    return collectionData(q, { idField: 'id' }).pipe(
+      map(msgs => msgs.filter(m => m['clientId'] === clientId))
     );
   }
 
   getAllMessages(): Observable<any[]> {
     const msgCollection = collection(this.firestore, 'messages');
-    return collectionData(msgCollection, { idField: 'id' }).pipe(
-      map(msgs => [...msgs].sort((a, b) => a['timestamp'] - b['timestamp']))
-    );
+    const q = query(msgCollection, orderBy('timestamp', 'asc'));
+    return collectionData(q, { idField: 'id' });
   }
 
   async sendMessage(clientId: string, senderRole: string, senderName: string, text: string) {

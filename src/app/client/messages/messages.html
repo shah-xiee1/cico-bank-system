@@ -10,7 +10,7 @@
       <img [src]="currentUserImage" class="avatar-sm" [alt]="currentUserName">
       <div class="info">
         <p class="name">{{ currentUserName }}</p>
-        <p class="role">Premium Client</p>
+        <p class="role">{{ fullPhone$ | async }}</p>
       </div>
     </div>
 
@@ -54,7 +54,6 @@
     <header class="command-header">
       <div>
         <h1>Support Messages</h1>
-        <p class="text-muted">Chat with our staff for assistance</p>
       </div>
     </header>
 
@@ -74,6 +73,7 @@
       <div class="chat-messages" #scrollMe [scrollTop]="scrollMe.scrollHeight">
         <ng-container *ngIf="messages$ | async as msgs">
           <div *ngFor="let msg of msgs" class="message-row" [ngClass]="msg.senderRole.toLowerCase()">
+            <img *ngIf="msg.senderRole === 'Staff'" [src]="msg.image" class="avatar-chat" [alt]="msg.senderName">
             <div class="message-bubble">
               <div class="msg-text">{{ msg.text }}</div>
               <span class="message-meta">{{ msg.timestamp | date:'shortTime' }}</span>

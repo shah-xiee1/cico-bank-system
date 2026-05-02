@@ -54,8 +54,6 @@
     <header class="command-header">
       <div>
         <h1>Support Inbox</h1>
-        <p class="text-muted">Respond to client queries and transaction issues</p>
-        <p style="font-size: 0.8rem; color: #ef4444; margin-top: 10px;">{{ debugInfo }}</p>
       </div>
     </header>
 
@@ -65,7 +63,7 @@
         <div class="pane-header">
           <h3>Active Conversations</h3>
         </div>
-        <div class="chat-sessions">
+        <div class="chat-sessions" *ngIf="sessions$ | async as chatSessions">
           <div *ngFor="let session of chatSessions" 
                class="session-item" 
                [class.active]="selectedClientId === session.clientId"
@@ -86,12 +84,7 @@
       <div class="pane chat-view-pane">
         <ng-container *ngIf="selectedClientId; else noSelection">
           <div class="chat-view-header">
-            <div class="chat-view-header-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-            </div>
+            <img [src]="selectedClientImage" class="avatar-sm" style="margin-right: 12px; border-radius: 50%;" [alt]="selectedClientName">
             <div>
               <h2>{{ selectedClientName }}</h2>
               <p><span class="status-dot"></span> Client Session Active</p>
@@ -100,10 +93,12 @@
           
           <div class="chat-messages" #scrollMe [scrollTop]="scrollMe.scrollHeight">
             <div *ngFor="let msg of activeMessages" class="message-row" [ngClass]="msg.senderRole.toLowerCase()">
+              <img *ngIf="msg.senderRole === 'Client'" [src]="msg.image" class="avatar-chat-staff" [alt]="msg.senderName">
               <div class="message-bubble">
                 <div class="msg-text">{{ msg.text }}</div>
                 <span class="message-meta">{{ msg.timestamp | date:'shortTime' }}</span>
               </div>
+              <img *ngIf="msg.senderRole === 'Staff'" [src]="msg.image" class="avatar-chat-staff" [alt]="msg.senderName">
             </div>
             <div *ngIf="activeMessages.length === 0" style="text-align: center; color: var(--text-muted); margin-top: 60px; font-weight: 500;">
               No messages in this conversation.

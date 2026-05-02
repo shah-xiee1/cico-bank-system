@@ -103,6 +103,19 @@
 
 .message-row.staff {
   justify-content: flex-start;
+  gap: 8px;
+}
+
+.avatar-chat {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  flex-shrink: 0;
+  align-self: flex-end;
+  margin-bottom: 4px;
 }
 
 .message-bubble {

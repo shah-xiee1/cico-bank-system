@@ -56,11 +56,21 @@
 .chip:hover { background: #f1f5f9; color: var(--primary); }
 .chip.active { background: #eff6ff; color: var(--primary); border-color: var(--primary); }
 
-.table-wrapper { overflow-x: auto; }
+.table-wrapper {
+  overflow-x: auto;
+  max-height: 550px;
+  overflow-y: auto;
+}
 
 .tx-table-unified {
   width: 100%;
   border-collapse: collapse;
+}
+
+.tx-table-unified thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .tx-table-unified th {

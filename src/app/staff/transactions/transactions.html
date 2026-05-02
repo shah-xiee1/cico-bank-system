@@ -54,7 +54,6 @@
     <header class="command-header">
       <div>
         <h1>All Transactions</h1>
-        <p class="text-muted">Review, approve or reject client transactions</p>
       </div>
     </header>
 
@@ -99,7 +98,8 @@
             <thead>
               <tr>
                 <th>Date &amp; Time</th>
-                <th>Client</th>
+                <th>Sender / Initiator</th>
+                <th>Transfer To / Recipient</th>
                 <th>Type</th>
                 <th>Amount</th>
                 <th>Status</th>
@@ -109,15 +109,8 @@
             <tbody *ngIf="allTransactions$ | async as allTxs">
               <tr *ngFor="let tx of getFiltered(allTxs)" class="tx-row" (click)="openModal(tx)">
                 <td class="ts">{{ tx.date }}</td>
-                <td>
-                  <div class="user-cell">
-                    <img [src]="tx.image" class="avatar-table" [alt]="tx.client">
-                    <div>
-                      <p class="log-title">{{ tx.client }}</p>
-                      <p class="log-desc">{{ tx.desc }}</p>
-                    </div>
-                  </div>
-                </td>
+                <td><strong>{{ tx.senderName }}</strong></td>
+                <td><strong>{{ tx.recipientName }}</strong></td>
                 <td><span class="tag" [ngClass]="tx.typeClass">{{ tx.type }}</span></td>
                 <td class="tx-val" [ngClass]="tx.amountClass">{{ tx.amount }}</td>
                 <td><span class="status-badge" [ngClass]="tx.statusClass">{{ tx.status }}</span></td>
@@ -157,8 +150,9 @@
         <span class="status-badge" [ngClass]="selectedTx.statusClass">{{ selectedTx.status }}</span>
       </div>
       <div class="tx-modal-info-grid">
-        <div class="tx-info-item"><span class="tx-info-label">Client</span><span class="tx-info-value">{{ selectedTx.client }}</span></div>
-        <div class="tx-info-item"><span class="tx-info-label">Description</span><span class="tx-info-value">{{ selectedTx.desc }}</span></div>
+        <div class="tx-info-item"><span class="tx-info-label">Sender</span><span class="tx-info-value">{{ selectedTx.senderName }}</span></div>
+        <div class="tx-info-item"><span class="tx-info-label">Recipient</span><span class="tx-info-value">{{ selectedTx.recipientName }}</span></div>
+        <div class="tx-info-item"><span class="tx-info-label">Reference</span><span class="tx-info-value">{{ selectedTx.desc }}</span></div>
         <div class="tx-info-item"><span class="tx-info-label">Type</span><span class="tx-info-value"><span class="tag" [ngClass]="selectedTx.typeClass">{{ selectedTx.type }}</span></span></div>
         <div class="tx-info-item"><span class="tx-info-label">Date &amp; Time</span><span class="tx-info-value">{{ selectedTx.date }}</span></div>
         <div class="tx-info-item" *ngIf="selectedTx.processedBy"><span class="tx-info-label">Processed By</span><span class="tx-info-value">{{ selectedTx.processedBy }}</span></div>

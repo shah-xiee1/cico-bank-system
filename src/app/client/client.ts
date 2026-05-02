@@ -2,7 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { DatabaseService } from '../services/database.service';
-import { Observable } from 'rxjs';
+import { Observable, firstValueFrom, combineLatest } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
 
@@ -34,6 +34,8 @@ export class ClientComponent implements OnInit {
   recentActivity$!: Observable<any[]>;
   balance$!: Observable<number>;
   otherClients$!: Observable<any[]>;
+  currentUserPhone$!: Observable<string>;
+  fullPhone$!: Observable<string>;
 
   ngOnInit() {
     this.currentUserId = localStorage.getItem('currentUser') || 'excel_john';
@@ -42,31 +44,66 @@ export class ClientComponent implements OnInit {
     this.currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
     this.dbService.initClientBalance(this.currentUserId);
-    this.recentActivity$ = this.dbService.getTransactions().pipe(
-      map(txs => txs.filter(tx => tx.senderId === this.currentUserId || tx.recipientId === this.currentUserId || (!tx.senderId && !tx.recipientId))),
-      map(txs => txs.map(tx => {
-        let displayAmount = tx.amount || '';
-        let displayColor = tx.color || '';
-        let displayTitle = tx.title || '';
-        // If current user is the recipient, show as income
-        if (tx.recipientId === this.currentUserId) {
+    this.recentActivity$ = combineLatest([
+      this.dbService.getTransactions(),
+      this.dbService.getUsers()
+    ]).pipe(
+      map(([txs, users]: [any[], any[]]) => {
+        const filtered = txs.filter((tx: any) => 
+          tx.senderId === this.currentUserId || 
+          (tx.recipientId === this.currentUserId && tx.status === 'Approved')
+        );
+
+        return filtered.map((tx: any) => {
+          let displayAmount = tx.amount || '';
+          let displayColor = tx.color || '';
+          let displayTitle = tx.title || '';
+
+          // Find sender/recipient details
+          const sender = users.find((u: any) => u.id === tx.senderId);
+          const recipient = users.find((u: any) => u.id === tx.recipientId);
+
+          // If current user is the recipient, show as income and use sender info
+          if (tx.recipientId === this.currentUserId) {
             if (displayAmount.includes('-')) {
-                displayAmount = displayAmount.replace('-', '+');
-                displayColor = 'bg-green';
+              displayAmount = displayAmount.replace('-', '+');
+              displayColor = 'bg-green';
             }
-            if (tx.senderId === 'excel_john') displayTitle = 'Excel John (client@cico.com)';
-            else if (tx.senderId === 'jane_doe') displayTitle = 'Jane Doe (client2@cico.com)';
-            else displayTitle = 'Incoming Transfer';
-        }
-        return { ...tx, amount: displayAmount, color: displayColor, title: displayTitle };
-      })),
-      map(txs => txs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)))
+            if (sender) {
+              displayTitle = `${sender.name} (${sender.phone})`;
+            } else {
+              displayTitle = 'Incoming Transfer';
+            }
+          } else if (tx.senderId === this.currentUserId && recipient) {
+            // For sender, if it was a client-to-client transfer, show recipient name+phone
+            displayTitle = `${recipient.name} (${recipient.phone})`;
+          }
+
+          return { ...tx, amount: displayAmount, color: displayColor, title: displayTitle };
+        });
+      }),
+      map((txs: any[]) => txs.sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0)))
     );
     this.balance$ = this.dbService.getClientBalance(this.currentUserId).pipe(
       map((data: any) => data?.balance ?? 25000)
     );
     this.otherClients$ = this.dbService.getUsers().pipe(
-      map(users => users.filter(u => u.role === 'Client' && u.id !== this.currentUserId))
+      map((users: any[]) => users.filter((u: any) => u.role === 'Client' && u.id !== this.currentUserId))
+    );
+    this.currentUserPhone$ = this.dbService.getUsers().pipe(
+      map((users: any[]) => {
+        const me = users.find((u: any) => u.id === this.currentUserId);
+        const phone = me?.phone || '0000';
+        // Extract only digits and get last 4
+        const digits = phone.replace(/\D/g, '');
+        return '**** **** **** ' + digits.slice(-4);
+      })
+    );
+    this.fullPhone$ = this.dbService.getUsers().pipe(
+      map((users: any[]) => {
+        const me = users.find((u: any) => u.id === this.currentUserId);
+        return me?.phone || '0900 000 0000';
+      })
     );
   }
 
@@ -97,13 +134,15 @@ export class ClientComponent implements OnInit {
     }
   }
 
-  initiateTransaction(type: string, amount: string, recipientIdOrMethod: string, recipientName: string = '') {
-    if(!amount || !recipientIdOrMethod) {
+  initiateTransaction(type: string, amount: string, primary: string, secondary: string = '') {
+    if(!amount || !primary) {
       alert('Please fill out all required fields.');
       return;
     }
 
-    this.pendingTxDetails = { type, amount, recipientIdOrMethod, recipientName };
+    // type='send': primary=phone, secondary=''
+    // type='deposit': primary=method, secondary=phone
+    this.pendingTxDetails = { type, amount, primary, secondary };
     
     // Hide all form modals and show OTP modal
     this.showSendModal = false;
@@ -120,23 +159,37 @@ export class ClientComponent implements OnInit {
 
     if (!this.pendingTxDetails) return;
 
-    const { type, amount, recipientIdOrMethod, recipientName } = this.pendingTxDetails;
+    const { type, amount, primary, secondary } = this.pendingTxDetails;
 
-    // For Send, recipientName is the actual name string we can pass, or we just look it up.
-    // We will just use 'Transfer' or 'Deposit' for the title.
-    const titleText = type === 'deposit' ? recipientIdOrMethod : (recipientName || 'Client Transfer');
+    let targetRecipientId: string | null = null;
+    let finalTitle = '';
+
+    if (type === 'send') {
+      // primary is phone number
+      const clients = await firstValueFrom(this.otherClients$);
+      const target = clients.find(c => (c.phone || '').replace(/\s/g, '') === primary.replace(/\s/g, ''));
+      if (target) {
+        targetRecipientId = target.id;
+        finalTitle = `${target.name} (${target.phone})`;
+      } else {
+        finalTitle = `${primary} (Transfer)`;
+      }
+    } else {
+      // Deposit: primary=method, secondary=phone
+      finalTitle = `${primary} (${secondary})`;
+    }
 
     let txData = {
-      title: titleText,
+      title: finalTitle,
       time: new Date().toLocaleString(),
       amount: type === 'deposit' ? `+ ₱ ${amount}` : `- ₱ ${amount}`,
       color: type === 'deposit' ? 'bg-green' : 'bg-red',
-      icon: titleText.charAt(0).toUpperCase(),
+      icon: finalTitle.charAt(0).toUpperCase(),
       status: 'Pending',
       category: type === 'deposit' ? 'Deposit' : 'Transfer',
       reference: 'TXN-' + Math.floor(Math.random() * 1000000),
       senderId: this.currentUserId,
-      recipientId: type === 'send' ? recipientIdOrMethod : null
+      recipientId: targetRecipientId
     };
 
     await this.dbService.addTransaction(txData);

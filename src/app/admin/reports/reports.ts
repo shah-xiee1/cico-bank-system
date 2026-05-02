@@ -3,7 +3,7 @@ import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DatabaseService } from '../../services/database.service';
-import { Observable, combineLatest, map } from 'rxjs';
+import { Observable, combineLatest, map, BehaviorSubject } from 'rxjs';
 
 @Component({
   selector: 'app-reports',
@@ -19,6 +19,8 @@ export class Reports implements OnInit {
   passwordRequests$!: Observable<any[]>;
   notifications$!: Observable<any[]>;
   allTransactions$!: Observable<any[]>;
+  filteredTransactions$!: Observable<any[]>;
+  searchTerm$ = new BehaviorSubject<string>('');
   
   userName: string = 'Admin';
   userImage: string = '/images/admin.jpg';
@@ -50,6 +52,22 @@ export class Reports implements OnInit {
     );
 
     this.applyFilter();
+
+    // Search filter for transactions
+    this.filteredTransactions$ = combineLatest([this.allTransactions$, this.searchTerm$]).pipe(
+      map(([txs, term]) => {
+        if (!term.trim()) return txs;
+        const lowerTerm = term.toLowerCase();
+        return txs.filter(tx => 
+          (tx.title || '').toLowerCase().includes(lowerTerm) ||
+          (tx.category || '').toLowerCase().includes(lowerTerm) ||
+          (tx.reference || '').toLowerCase().includes(lowerTerm) ||
+          (tx.processedBy || '').toLowerCase().includes(lowerTerm) ||
+          (tx.status || '').toLowerCase().includes(lowerTerm) ||
+          (tx.amount || '').toString().toLowerCase().includes(lowerTerm)
+        );
+      })
+    );
   }
 
   setFilter(f: 'All' | 'Client' | 'Staff') {
@@ -65,6 +83,11 @@ export class Reports implements OnInit {
         return sorted.filter(n => n.source === this.activeFilter);
       })
     );
+  }
+
+  onSearch(event: Event) {
+    const value = (event.target as HTMLInputElement).value;
+    this.searchTerm$.next(value);
   }
 
   async handleRequest(id: string, action: string) {

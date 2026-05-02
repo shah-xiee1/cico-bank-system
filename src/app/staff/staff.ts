@@ -2,7 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { DatabaseService } from '../services/database.service';
-import { Observable, map } from 'rxjs';
+import { Observable, map, combineLatest } from 'rxjs';
 
 @Component({
   selector: 'app-staff',
@@ -18,6 +18,7 @@ export class StaffComponent implements OnInit {
   currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   userName: string = 'Staff';
   userImage: string = '/images/staff.jpg';
+  fullPhone$!: Observable<string>;
   
   pendingTransactions$: Observable<any[]> = new Observable();
   selectedTx: any = null;
@@ -31,31 +32,48 @@ export class StaffComponent implements OnInit {
   ngOnInit() {
     this.userName = localStorage.getItem('currentUserName') || 'Cindy Ma. Lala';
     this.userImage = '/images/staff.jpg';
-    this.pendingTransactions$ = this.dbService.getTransactions().pipe(
-      map(txs => {
-        const pending = txs.filter(tx => tx.status === 'Pending').sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    this.pendingTransactions$ = combineLatest([
+      this.dbService.getTransactions(),
+      this.dbService.getUsers()
+    ]).pipe(
+      map(([txs, users]: [any[], any[]]) => {
+        const pending = txs.filter((tx: any) => tx.status === 'Pending').sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
         this.stats.pending = pending.length;
-        this.stats.processed = txs.filter(tx => tx.status !== 'Pending').length;
+        this.stats.processed = txs.filter((tx: any) => tx.status !== 'Pending').length;
         
-        const total = txs.reduce((acc, tx) => {
+        const total = txs.reduce((acc: number, tx: any) => {
           const amt = parseFloat((tx.amount || '').replace(/[^0-9.]/g, '')) || 0;
           return acc + amt;
         }, 0);
         this.stats.totalVolume = '₱ ' + total.toLocaleString();
         
-        if (!this.selectedTx && pending.length > 0) {
-          this.selectedTx = pending[0];
+        const enriched = pending.map((tx: any) => {
+          const sender = users.find((u: any) => u.id === tx.senderId);
+          const recipient = users.find((u: any) => u.id === tx.recipientId);
+          
+          return {
+            ...tx,
+            senderName: sender ? sender.name : (tx.senderId || 'System'),
+            recipientName: recipient ? recipient.name : (tx.title || 'N/A'),
+            image: sender ? sender.image : '/images/client.jpg'
+          };
+        });
+
+        if (!this.selectedTx && enriched.length > 0) {
+          this.selectedTx = enriched[0];
         } else if (this.selectedTx) {
-          // Keep current selection if it still exists in the list
-          const updated = pending.find(t => t.id === this.selectedTx.id);
+          const updated = enriched.find((t: any) => t.id === this.selectedTx.id);
           if (updated) this.selectedTx = updated;
-          else this.selectedTx = pending.length > 0 ? pending[0] : null;
+          else this.selectedTx = enriched.length > 0 ? enriched[0] : null;
         }
         
-        return pending.map(tx => ({
-          ...tx,
-          image: tx.senderId === 'jane_doe' ? '/images/client2.jpg' : '/images/client.jpg'
-        }));
+        return enriched;
+      })
+    );
+    this.fullPhone$ = this.dbService.getUsers().pipe(
+      map((users: any[]) => {
+        const me = users.find((u: any) => u.name === this.userName);
+        return me?.phone || '0900 000 0000';
       })
     );
   }

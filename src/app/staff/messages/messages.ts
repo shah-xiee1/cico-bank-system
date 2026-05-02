@@ -1,9 +1,9 @@
-import { Component, inject, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DatabaseService } from '../../services/database.service';
-import { Subscription } from 'rxjs';
+import { Observable, combineLatest, map } from 'rxjs';
 
 @Component({
   selector: 'app-staff-messages',
@@ -12,133 +12,106 @@ import { Subscription } from 'rxjs';
   templateUrl: './messages.html',
   styleUrl: './messages.css'
 })
-export class StaffMessagesComponent implements OnInit, OnDestroy {
+export class StaffMessagesComponent implements OnInit {
   private dbService = inject(DatabaseService);
-  private cdr = inject(ChangeDetectorRef);
   
-  chatSessions: any[] = [];
+  sessions$!: Observable<any[]>;
   selectedClientId: string | null = null;
   selectedClientName: string = '';
-  
+  selectedClientImage: string = '';
   activeMessages: any[] = [];
   newMessageText: string = '';
 
   staffName = 'Staff';
   staffImage = '/images/staff.jpg';
 
-  allMessages: any[] = [];
-  users: any[] = [];
-
-  private msgsSub!: Subscription;
-  private usersSub!: Subscription;
-
-  public debugInfo: string = 'Initializing...';
-
   ngOnInit() {
     this.staffName = localStorage.getItem('currentUserName') || 'Cindy Ma. Lala';
-    this.staffImage = '/images/staff.jpg';
 
-    try {
-      this.usersSub = this.dbService.getUsers().subscribe({
-        next: (u) => {
-          this.users = u || [];
-          this.processMessages();
-          this.cdr.detectChanges();
-        },
-        error: (err) => {
-          this.debugInfo = 'Error loading users: ' + err?.message;
-          this.cdr.detectChanges();
-        }
-      });
-    } catch (e: any) {
-      this.debugInfo = 'Sync Error Users: ' + e?.message;
-      this.cdr.detectChanges();
-    }
+    this.sessions$ = combineLatest([
+      this.dbService.getAllMessages(),
+      this.dbService.getUsers()
+    ]).pipe(
+      map(([msgs, users]: [any[], any[]]) => {
+        const grouped = new Map<string, any>();
+        
+        msgs.forEach(m => {
+          if (!m.clientId) return;
 
-    try {
-      this.msgsSub = this.dbService.getAllMessages().subscribe({
-        next: (msgs) => {
-          this.allMessages = msgs || [];
-          this.debugInfo = `Loaded ${this.allMessages.length} messages from DB.`;
-          this.processMessages();
-          this.cdr.detectChanges();
-        },
-        error: (err) => {
-          this.debugInfo = 'Error loading messages: ' + err?.message;
-          this.cdr.detectChanges();
-        }
-      });
-    } catch (e: any) {
-      this.debugInfo = 'Sync Error Msgs: ' + e?.message;
-      this.cdr.detectChanges();
-    }
-  }
-
-  ngOnDestroy() {
-    if (this.msgsSub) this.msgsSub.unsubscribe();
-    if (this.usersSub) this.usersSub.unsubscribe();
-  }
-
-  processMessages() {
-    if (!this.allMessages) return;
-    
-    const grouped = new Map<string, any>();
-    
-    this.allMessages.forEach(m => {
-      if (!m.clientId) return;
-
-      if (!grouped.has(m.clientId)) {
-        const clientUser = this.users.find(u => u.id === m.clientId);
-        grouped.set(m.clientId, {
-          clientId: m.clientId,
-          clientName: clientUser ? clientUser.name : (m.senderRole === 'Client' ? m.senderName : 'Unknown Client'),
-          clientImage: clientUser ? clientUser.image : '/images/client.jpg',
-          messages: [],
-          lastMessage: null
+          if (!grouped.has(m.clientId)) {
+            const clientUser = users.find(u => u.id === m.clientId);
+            grouped.set(m.clientId, {
+              clientId: m.clientId,
+              clientName: clientUser ? clientUser.name : (m.senderRole === 'Client' ? m.senderName : 'Unknown Client'),
+              clientImage: clientUser ? clientUser.image : '/images/client.jpg',
+              messages: [],
+              lastMessage: null
+            });
+          }
+          
+          const group = grouped.get(m.clientId);
+          const clientUser = users.find(u => u.id === m.clientId);
+          const staffUser = users.find(u => u.name === m.senderName && u.role === 'Staff');
+          
+          const enrichedMsg = {
+            ...m,
+            image: m.senderRole === 'Staff' 
+              ? (staffUser ? staffUser.image : '/images/staff.jpg')
+              : (clientUser ? clientUser.image : '/images/client.jpg')
+          };
+          
+          group.messages.push(enrichedMsg);
+          
+          if (!group.lastMessage || m.timestamp > group.lastMessage.timestamp) {
+            group.lastMessage = enrichedMsg;
+          }
         });
-      }
-      
-      const group = grouped.get(m.clientId);
-      group.messages.push(m);
-      
-      if (!group.lastMessage || m.timestamp > group.lastMessage.timestamp) {
-        group.lastMessage = m;
-      }
-    });
-    
-    this.chatSessions = Array.from(grouped.values()).sort((a, b) => b.lastMessage.timestamp - a.lastMessage.timestamp);
-    
-    if (this.selectedClientId) {
-      this.activeMessages = this.chatSessions.find(s => s.clientId === this.selectedClientId)?.messages || [];
-      if (this.activeMessages.length === 0 && this.chatSessions.length > 0) {
-        this.selectClient(this.chatSessions[0]);
-      }
-    } else if (this.chatSessions.length > 0) {
-      this.selectClient(this.chatSessions[0]);
-    }
+        
+        const sessions = Array.from(grouped.values()).sort((a, b) => b.lastMessage.timestamp - a.lastMessage.timestamp);
+        
+        // Sync current selection
+        if (this.selectedClientId) {
+          const current = sessions.find(s => s.clientId === this.selectedClientId);
+          if (current) {
+            this.activeMessages = current.messages;
+            this.selectedClientName = current.clientName;
+            this.selectedClientImage = current.clientImage;
+          }
+        } else if (sessions.length > 0) {
+          this.selectClient(sessions[0]);
+        }
+        
+        return sessions;
+      })
+    );
   }
 
   selectClient(session: any) {
     this.selectedClientId = session.clientId;
     this.selectedClientName = session.clientName;
+    this.selectedClientImage = session.clientImage;
     this.activeMessages = session.messages;
-    this.cdr.detectChanges();
   }
 
   async sendMessage() {
     if (!this.newMessageText.trim() || !this.selectedClientId) return;
     
+    const text = this.newMessageText.trim();
+    const clientId = this.selectedClientId;
+    
+    // Clear input immediately for better UX
+    this.newMessageText = '';
+    
     try {
       await this.dbService.sendMessage(
-        this.selectedClientId,
+        clientId,
         'Staff',
         this.staffName,
-        this.newMessageText.trim()
+        text
       );
-      this.newMessageText = '';
-      this.cdr.detectChanges();
     } catch (err: any) {
       alert('Error sending message: ' + err.message);
+      this.newMessageText = text; // Restore text on failure
     }
   }
 }
