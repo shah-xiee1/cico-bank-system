@@ -71,15 +71,15 @@
       </div>
       
       <div class="chat-messages" #scrollMe [scrollTop]="scrollMe.scrollHeight">
-        <ng-container *ngIf="messages$ | async as msgs">
-          <div *ngFor="let msg of msgs" class="message-row" [ngClass]="msg.senderRole.toLowerCase()">
+        <ng-container>
+          <div *ngFor="let msg of activeMessages" class="message-row" [ngClass]="msg.senderRole.toLowerCase()">
             <img *ngIf="msg.senderRole === 'Staff'" [src]="msg.image" class="avatar-chat" [alt]="msg.senderName">
             <div class="message-bubble">
               <div class="msg-text">{{ msg.text }}</div>
               <span class="message-meta">{{ msg.timestamp | date:'shortTime' }}</span>
             </div>
           </div>
-          <div *ngIf="msgs.length === 0" style="text-align: center; color: var(--text-muted); margin-top: 60px; font-weight: 500;">
+          <div *ngIf="activeMessages.length === 0" style="text-align: center; color: var(--text-muted); margin-top: 60px; font-weight: 500;">
             <svg style="opacity:0.2; margin-bottom:10px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="48" height="48"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
             <p>No messages yet.</p>
             <p style="font-size:0.85rem">Send a message to start a conversation with support.</p>

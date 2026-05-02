@@ -106,8 +106,8 @@ export class Transactions implements OnInit {
   }
 
   getStatusClass(status: string) {
-    if (status === 'Approved') return 'success';
-    if (status === 'Rejected') return 'blocked';
+    if (status === 'Approved') return 'approved';
+    if (status === 'Rejected') return 'rejected';
     return 'pending';
   }
 

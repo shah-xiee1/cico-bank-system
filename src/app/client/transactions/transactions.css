@@ -57,9 +57,29 @@
 .chip.active { background: #eff6ff; color: var(--primary); border-color: var(--primary); }
 
 .table-wrapper {
+  display: block;
   overflow-x: auto;
-  max-height: 550px;
-  overflow-y: auto;
+  max-height: 450px;
+  overflow-y: scroll; /* Force visibility */
+  scrollbar-width: thin;
+}
+
+.table-wrapper::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }
 
 .tx-table-unified {

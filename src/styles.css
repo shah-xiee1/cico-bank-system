@@ -209,6 +209,10 @@ body {
   transform: scale(1.1);
 }
 
+.nav-btn:active {
+  transform: scale(0.98);
+}
+
 /* The "Progress Node" Indicator */
 .nav-btn::before {
   content: '';
@@ -264,6 +268,10 @@ body {
   border-color: #ef4444;
 }
 
+.logout-btn:active {
+  transform: scale(0.96);
+}
+
 .command-main {
   flex: 1;
   padding: 40px;
@@ -300,9 +308,9 @@ body {
   box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
 }
 
-.btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
+.btn-primary:active, button:active, .clickable:active {
+  transform: scale(0.96) translateY(0) !important;
+  transition: transform 0.1s;
 }
 
 .solid-card {
@@ -437,10 +445,12 @@ body {
 
 .btn-approve { background: #f0fdf4; color: #10b981; }
 .btn-approve:hover { background: #dcfce7; }
+.btn-approve:active { transform: scale(0.95); }
 .btn-approve.sm { padding: 6px 12px; }
 
 .btn-reject { background: #fef2f2; color: #ef4444; }
 .btn-reject:hover { background: #fee2e2; }
+.btn-reject:active { transform: scale(0.95); }
 .btn-reject.sm { padding: 6px 12px; }
 
 .no-results {

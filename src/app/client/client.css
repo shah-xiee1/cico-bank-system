@@ -165,9 +165,30 @@
 }
 
 .activity-list {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  display: block;
+  max-height: 320px;
+  overflow-y: scroll; /* Force visibility */
+  overflow-x: hidden;
+  padding-right: 12px;
+}
+
+/* Premium Scrollbar for Activity List */
+.activity-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.activity-list::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 10px;
+}
+
+.activity-list::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+
+.activity-list::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }
 
 .activity-item {
@@ -175,8 +196,9 @@
   align-items: center;
   gap: 15px;
   transition: all 0.2s;
-  padding: 8px;
+  padding: 12px 8px;
   border-radius: 12px;
+  margin-bottom: 8px;
 }
 
 .activity-item.clickable {

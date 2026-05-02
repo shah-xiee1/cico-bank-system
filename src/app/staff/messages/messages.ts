@@ -99,8 +99,20 @@ export class StaffMessagesComponent implements OnInit {
     const text = this.newMessageText.trim();
     const clientId = this.selectedClientId;
     
-    // Clear input immediately for better UX
+    // Clear input immediately
     this.newMessageText = '';
+
+    // Optimistic UI: Add the message locally first for instant feedback
+    const optimisticMsg = {
+      clientId,
+      senderRole: 'Staff',
+      senderName: this.staffName,
+      text,
+      timestamp: new Date().getTime(),
+      image: this.staffImage,
+      isOptimistic: true
+    };
+    this.activeMessages = [...this.activeMessages, optimisticMsg];
     
     try {
       await this.dbService.sendMessage(
@@ -110,8 +122,10 @@ export class StaffMessagesComponent implements OnInit {
         text
       );
     } catch (err: any) {
+      // Rollback optimistic update on error
+      this.activeMessages = this.activeMessages.filter(m => m !== optimisticMsg);
       alert('Error sending message: ' + err.message);
-      this.newMessageText = text; // Restore text on failure
+      this.newMessageText = text;
     }
   }
 }

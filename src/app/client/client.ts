@@ -37,6 +37,7 @@ export class ClientComponent implements OnInit {
   currentUserPhone$!: Observable<string>;
   fullPhone$!: Observable<string>;
   currentBalanceNumeric: number = 0;
+  systemConfig: any = null;
 
   ngOnInit() {
     this.currentUserId = localStorage.getItem('currentUser') || 'excel_john';
@@ -110,6 +111,7 @@ export class ClientComponent implements OnInit {
         return me?.phone || '0900 000 0000';
       })
     );
+    this.dbService.getSystemConfig().subscribe(config => this.systemConfig = config);
   }
 
   openModal(type: 'send' | 'deposit' | 'detail', tx?: any) {
@@ -139,7 +141,7 @@ export class ClientComponent implements OnInit {
     }
   }
 
-  async initiateTransaction(type: string, amount: string, primary: string, secondary: string = '') {
+  initiateTransaction(type: string, amount: string, primary: string, secondary: string = '') {
     if(!amount || !primary) {
       alert('Please fill out all required fields.');
       return;
@@ -154,8 +156,7 @@ export class ClientComponent implements OnInit {
     }
 
     // Check for Global Transfer Limit
-    const config = await firstValueFrom(this.dbService.getSystemConfig());
-    const limit = parseFloat(config?.transferLimit?.toString().replace(/,/g, '')) || 500000;
+    const limit = parseFloat(this.systemConfig?.transferLimit?.toString().replace(/,/g, '')) || 500000;
 
     if (type === 'send' && numericAmount > limit) {
       alert(`Transaction Denied! The global transfer limit is ₱ ${limit.toLocaleString()}. Please reduce your amount.`);
