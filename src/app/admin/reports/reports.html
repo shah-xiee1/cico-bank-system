@@ -178,14 +178,17 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let tx of txs">
-              <td><p class="log-title">{{ tx.title || 'Unknown' }}</p></td>
+            <tr *ngFor="let tx of txs; let i = index">
+              <td>
+                <span *ngIf="i === 0" class="badge" style="font-size:0.6rem; padding: 2px 6px; margin-right: 5px; background: var(--primary); color: white;">Latest</span>
+                <p class="log-title" style="display:inline-block; margin:0;">{{ tx.title || 'Unknown' }}</p>
+              </td>
               <td>{{ tx.category || 'Transfer' }}</td>
               <td><strong>{{ tx.amount }}</strong></td>
               <td class="source">{{ tx.reference || 'N/A' }}</td>
               <td><span class="status-badge" [ngClass]="getStatusBadgeClass(tx.status)">{{ tx.status }}</span></td>
               <td class="ts">{{ tx.processedBy || '—' }}</td>
-              <td class="ts">{{ tx.time || (tx.timestamp | date:'medium') }}</td>
+              <td class="ts">{{ tx.timestamp | date:'MMM d, y, h:mm a' }}</td>
             </tr>
             <tr *ngIf="txs.length === 0">
               <td colspan="7" class="no-results">
@@ -226,13 +229,16 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let n of notifs">
-              <td><span class="tag" [ngClass]="getSourceBadgeClass(n.source)">{{ n.source }}</span></td>
+            <tr *ngFor="let n of notifs; let i = index">
+              <td>
+                <span *ngIf="i === 0" class="badge" style="font-size:0.6rem; padding: 2px 6px; margin-right: 5px; background: var(--primary); color: white;">Latest</span>
+                <span class="tag" [ngClass]="getSourceBadgeClass(n.source)">{{ n.source }}</span>
+              </td>
               <td><p class="log-title">{{ n.type }}</p></td>
               <td class="log-desc-cell">{{ n.description }}</td>
               <td class="source">{{ n.reference }}</td>
               <td><span class="status-badge" [ngClass]="getStatusBadgeClass(n.status)">{{ n.status }}</span></td>
-              <td class="ts">{{ n.date }}</td>
+              <td class="ts">{{ n.timestamp | date:'MMM d, y, h:mm a' }}</td>
             </tr>
             <tr *ngIf="notifs.length === 0">
               <td colspan="6" class="no-results">

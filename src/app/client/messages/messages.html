@@ -1,0 +1,103 @@
+<div class="command-layout">
+  <!-- Solid Sidebar -->
+  <aside class="command-sidebar">
+    <div class="sidebar-header">
+      <div class="logo-box">CCB</div>
+      <h2>CICO BANK</h2>
+    </div>
+
+    <div class="profile-card">
+      <img [src]="currentUserImage" class="avatar-sm" [alt]="currentUserName">
+      <div class="info">
+        <p class="name">{{ currentUserName }}</p>
+        <p class="role">Premium Client</p>
+      </div>
+    </div>
+
+    <nav class="command-nav">
+      <div class="nav-section"></div>
+      <button class="nav-btn" routerLink="/client" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+        </span>
+        Dashboard
+      </button>
+      <button class="nav-btn" routerLink="/client/transactions" routerLinkActive="active">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        </span>
+        History
+      </button>
+      <button class="nav-btn" routerLink="/client/messages" routerLinkActive="active">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        </span>
+        Support
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="logout-btn" routerLink="/">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </span>
+        Logout Session
+      </button>
+    </div>
+  </aside>
+
+  <main class="command-main">
+    <header class="command-header">
+      <div>
+        <h1>Support Messages</h1>
+        <p class="text-muted">Chat with our staff for assistance</p>
+      </div>
+    </header>
+
+    <div class="chat-container">
+      <div class="chat-header">
+        <div class="chat-header-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+        </div>
+        <div class="chat-header-info">
+          <h2>Customer Support</h2>
+          <p><span class="status-dot"></span> Online &bull; Replies in minutes</p>
+        </div>
+      </div>
+      
+      <div class="chat-messages" #scrollMe [scrollTop]="scrollMe.scrollHeight">
+        <ng-container *ngIf="messages$ | async as msgs">
+          <div *ngFor="let msg of msgs" class="message-row" [ngClass]="msg.senderRole.toLowerCase()">
+            <div class="message-bubble">
+              <div class="msg-text">{{ msg.text }}</div>
+              <span class="message-meta">{{ msg.timestamp | date:'shortTime' }}</span>
+            </div>
+          </div>
+          <div *ngIf="msgs.length === 0" style="text-align: center; color: var(--text-muted); margin-top: 60px; font-weight: 500;">
+            <svg style="opacity:0.2; margin-bottom:10px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="48" height="48"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            <p>No messages yet.</p>
+            <p style="font-size:0.85rem">Send a message to start a conversation with support.</p>
+          </div>
+        </ng-container>
+      </div>
+
+      <div class="chat-input-area">
+        <div class="input-wrapper">
+          <input type="text" placeholder="Type your message here..." [(ngModel)]="newMessageText" (keyup.enter)="sendMessage()">
+        </div>
+        <button class="btn-send" (click)="sendMessage()" [disabled]="!newMessageText.trim()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </main>
+</div>

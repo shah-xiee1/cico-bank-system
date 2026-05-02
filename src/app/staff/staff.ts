@@ -33,7 +33,7 @@ export class StaffComponent implements OnInit {
     this.userImage = '/images/staff.jpg';
     this.pendingTransactions$ = this.dbService.getTransactions().pipe(
       map(txs => {
-        const pending = txs.filter(tx => tx.status === 'Pending');
+        const pending = txs.filter(tx => tx.status === 'Pending').sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         this.stats.pending = pending.length;
         this.stats.processed = txs.filter(tx => tx.status !== 'Pending').length;
         

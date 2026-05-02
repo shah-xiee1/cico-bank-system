@@ -8,6 +8,9 @@ import { Reports } from './admin/reports/reports';
 import { Settings } from './settings/settings';
 import { ClientTransactionsComponent } from './client/transactions/transactions';
 
+import { ClientMessagesComponent } from './client/messages/messages';
+import { StaffMessagesComponent } from './staff/messages/messages';
+
 export const routes: Routes = [
   { path: '', component: LogIn },
   { path: 'client', component: ClientComponent },
@@ -16,5 +19,7 @@ export const routes: Routes = [
   { path: 'transactions', component: Transactions },
   { path: 'client/transactions', component: ClientTransactionsComponent },
   { path: 'reports', component: Reports },
-  { path: 'settings', component: Settings }
+  { path: 'settings', component: Settings },
+  { path: 'client/messages', component: ClientMessagesComponent },
+  { path: 'staff/messages', component: StaffMessagesComponent }
 ];

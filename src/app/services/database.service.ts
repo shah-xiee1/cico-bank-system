@@ -248,6 +248,34 @@ export class DatabaseService {
     );
   }
 
+  // --- MESSAGES (Support Chat) ---
+  getMessages(clientId: string): Observable<any[]> {
+    const msgCollection = collection(this.firestore, 'messages');
+    return collectionData(msgCollection, { idField: 'id' }).pipe(
+      map(msgs => msgs.filter(m => m['clientId'] === clientId)
+                      .sort((a, b) => a['timestamp'] - b['timestamp']))
+    );
+  }
+
+  getAllMessages(): Observable<any[]> {
+    const msgCollection = collection(this.firestore, 'messages');
+    return collectionData(msgCollection, { idField: 'id' }).pipe(
+      map(msgs => [...msgs].sort((a, b) => a['timestamp'] - b['timestamp']))
+    );
+  }
+
+  async sendMessage(clientId: string, senderRole: string, senderName: string, text: string) {
+    const msgCollection = collection(this.firestore, 'messages');
+    return addDoc(msgCollection, {
+      clientId,
+      senderRole,
+      senderName,
+      text,
+      timestamp: new Date().getTime(),
+      read: false
+    });
+  }
+
   // --- ADMIN RESET ---
   async resetSystemData() {
     const txSnap = await getDocs(collection(this.firestore, 'transactions'));

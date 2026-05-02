@@ -34,7 +34,9 @@ export class Reports implements OnInit {
     this.userName = localStorage.getItem('currentUserName') || 'Hawk M. Beat';
     this.userImage = '/images/admin.jpg';
     this.passwordRequests$ = this.dbService.getPasswordRequests();
-    this.allTransactions$  = this.dbService.getTransactions();
+    this.allTransactions$  = this.dbService.getTransactions().pipe(
+      map(txs => txs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)))
+    );
     this.notifications$    = this.dbService.getNotifications();
 
     // Stats from transactions

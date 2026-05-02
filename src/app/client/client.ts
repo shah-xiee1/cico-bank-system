@@ -59,7 +59,8 @@ export class ClientComponent implements OnInit {
             else displayTitle = 'Incoming Transfer';
         }
         return { ...tx, amount: displayAmount, color: displayColor, title: displayTitle };
-      }))
+      })),
+      map(txs => txs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)))
     );
     this.balance$ = this.dbService.getClientBalance(this.currentUserId).pipe(
       map((data: any) => data?.balance ?? 25000)
