@@ -61,8 +61,8 @@ export class LogIn implements AfterViewInit {
       localStorage.setItem('currentUserRole', 'Client');
       this.router.navigate(['/client']);
     } else if (userEmail === 'client2@cico.com' && this.password === 'client2123') {
-      localStorage.setItem('currentUser', 'jane_doe');
-      localStorage.setItem('currentUserName', 'Jane Doe');
+      localStorage.setItem('currentUser', 'elliara_liv');
+      localStorage.setItem('currentUserName', 'Elliara Liv');
       localStorage.setItem('currentUserRole', 'Client');
       this.router.navigate(['/client']);
     }

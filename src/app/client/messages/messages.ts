@@ -28,7 +28,7 @@ export class ClientMessagesComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.currentUserId = localStorage.getItem('currentUser') || 'excel_john';
     this.currentUserName = localStorage.getItem('currentUserName') || 'Excel John';
-    this.currentUserImage = this.currentUserId === 'jane_doe' ? '/images/client2.jpg' : '/images/client.jpg';
+    this.currentUserImage = this.currentUserId === 'elliara_liv' ? '/images/client2.jpg' : '/images/client.jpg';
 
     this.messages$ = combineLatest([
       this.dbService.getMessages(this.currentUserId),

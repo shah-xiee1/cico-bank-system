@@ -113,7 +113,7 @@ export class DatabaseService {
     const balanceDoc = doc(this.firestore, `clients/${clientId}`);
     const snap = await getDoc(balanceDoc);
     if (!snap.exists()) {
-      await setDoc(balanceDoc, { balance: 25000, name: clientId === 'excel_john' ? 'Excel John' : 'Jane Doe', email: clientId === 'excel_john' ? 'client@cico.com' : 'client2@cico.com' });
+      await setDoc(balanceDoc, { balance: 25000, name: clientId === 'excel_john' ? 'Excel John' : 'Elliara Liv', email: clientId === 'excel_john' ? 'client@cico.com' : 'client2@cico.com' });
     }
   }
 
@@ -227,7 +227,7 @@ export class DatabaseService {
         const totalClientBalances = clients.reduce((acc, c: any) => acc + (c.balance || 0), 0);
         const reserves = reservesData?.total_reserves ?? 1200000;
         return {
-          totalUsers: 4, // Excel, Jane, Admin, Staff
+          totalUsers: 4, // Excel, Elliara, Admin, Staff
           totalFunds: '₱ ' + (reserves + totalClientBalances).toLocaleString(),
           reports: notifs.length,
           totalTransactions: txs.length
@@ -320,7 +320,7 @@ export class DatabaseService {
 
     // Reset client balances to 25000 and include phone numbers
     await setDoc(doc(this.firestore, 'clients/excel_john'), { balance: 25000, name: 'Excel John', email: 'client@cico.com', phone: '09171234567' });
-    await setDoc(doc(this.firestore, 'clients/jane_doe'), { balance: 25000, name: 'Jane Doe', email: 'client2@cico.com', phone: '09189876543' });
+    await setDoc(doc(this.firestore, 'clients/elliara_liv'), { balance: 25000, name: 'Elliara Liv', email: 'client2@cico.com', phone: '09189876543' });
 
     // Reset System Reserves
     await setDoc(doc(this.firestore, 'system/config'), { total_reserves: 1200000 });
