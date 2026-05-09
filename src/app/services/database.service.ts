@@ -318,6 +318,18 @@ export class DatabaseService {
     const sysHistorySnap = await getDocs(collection(this.firestore, 'system_funds_history'));
     await Promise.all(sysHistorySnap.docs.map(d => deleteDoc(d.ref)));
 
+    const msgSnap = await getDocs(collection(this.firestore, 'messages'));
+    await Promise.all(msgSnap.docs.map(d => deleteDoc(d.ref)));
+
+    const clientsSnap = await getDocs(collection(this.firestore, 'clients'));
+    await Promise.all(clientsSnap.docs.map(d => deleteDoc(d.ref)));
+
+    const staffSnap = await getDocs(collection(this.firestore, 'staff'));
+    await Promise.all(staffSnap.docs.map(d => deleteDoc(d.ref)));
+
+    const adminSnap = await getDocs(collection(this.firestore, 'admin'));
+    await Promise.all(adminSnap.docs.map(d => deleteDoc(d.ref)));
+
     // Reset client balances to 25000 and include phone numbers
     await setDoc(doc(this.firestore, 'clients/excel_john'), { balance: 25000, name: 'Excel John', email: 'client@cico.com', phone: '09171234567' });
     await setDoc(doc(this.firestore, 'clients/elliara_liv'), { balance: 25000, name: 'Elliara Liv', email: 'client2@cico.com', phone: '09189876543' });

@@ -38,26 +38,29 @@ export class StaffMessagesComponent implements OnInit {
         msgs.forEach(m => {
           if (!m.clientId) return;
 
+          const clientUser = users.find(u => u.id === m.clientId);
+          // FIX: Skip conversations for non-existent clients or known 'ghost' users (e.g. Jane Doe)
+          if (!clientUser || clientUser.name === 'Jane Doe') return; 
+
           if (!grouped.has(m.clientId)) {
-            const clientUser = users.find(u => u.id === m.clientId);
             grouped.set(m.clientId, {
               clientId: m.clientId,
-              clientName: clientUser ? clientUser.name : (m.senderRole === 'Client' ? m.senderName : 'Unknown Client'),
-              clientImage: clientUser ? clientUser.image : '/images/client.jpg',
+              clientName: clientUser.name,
+              clientImage: clientUser.image,
               messages: [],
               lastMessage: null
             });
           }
           
           const group = grouped.get(m.clientId);
-          const clientUser = users.find(u => u.id === m.clientId);
           const staffUser = users.find(u => u.name === m.senderName && u.role === 'Staff');
           
           const enrichedMsg = {
             ...m,
+            senderName: m.senderRole === 'Client' ? clientUser.name : m.senderName,
             image: m.senderRole === 'Staff' 
               ? (staffUser ? staffUser.image : '/images/staff.jpg')
-              : (clientUser ? clientUser.image : '/images/client.jpg')
+              : clientUser.image
           };
           
           group.messages.push(enrichedMsg);
