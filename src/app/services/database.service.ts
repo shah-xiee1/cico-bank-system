@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, collectionData, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, setDoc, query, orderBy } from '@angular/fire/firestore';
+import { Firestore, collection, collectionData, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, setDoc, query, orderBy, runTransaction } from '@angular/fire/firestore';
 import { Observable, from, combineLatest, map } from 'rxjs';
 import { docData } from '@angular/fire/firestore';
 
@@ -16,37 +16,74 @@ export class DatabaseService {
   }
 
   async addTransaction(txData: any) {
-    const txCollection = collection(this.firestore, 'transactions');
-    const docRef = await addDoc(txCollection, {
-      ...txData,
-      timestamp: new Date().getTime()
+    return await runTransaction(this.firestore, async (transaction) => {
+      const txCollection = collection(this.firestore, 'transactions');
+      const newTxDocRef = doc(txCollection); // Pre-generate doc reference
+      const timestamp = new Date().getTime();
+
+      // 1. Write the Transaction
+      transaction.set(newTxDocRef, {
+        ...txData,
+        timestamp: timestamp
+      });
+
+      // 2. Write the Notification (Atomic Audit Trail)
+      const notifCollection = collection(this.firestore, 'notifications');
+      const newNotifDocRef = doc(notifCollection);
+      transaction.set(newNotifDocRef, {
+        source: 'Client',
+        type: txData.category || 'Transaction',
+        description: `${txData.title} submitted a ${txData.category || 'Transaction'} of ${txData.amount}`,
+        reference: txData.reference || newTxDocRef.id,
+        status: 'Pending',
+        timestamp: timestamp,
+        date: new Date().toLocaleString()
+      });
+
+      return newTxDocRef;
     });
-    // Automatically log a notification for admin reports
-    await this.addNotification({
-      source: 'Client',
-      type: txData.category || 'Transaction',
-      description: `${txData.title} submitted a ${txData.category || 'Transaction'} of ${txData.amount}`,
-      reference: txData.reference || docRef.id,
-      status: 'Pending'
-    });
-    return docRef;
   }
 
   async updateTransactionStatus(id: string, newStatus: string, processedBy: string = '') {
-    const txDocRef = doc(this.firestore, `transactions/${id}`);
-    const updateData: any = { status: newStatus };
-    if (processedBy) updateData.processedBy = processedBy;
-    await updateDoc(txDocRef, updateData);
+    await runTransaction(this.firestore, async (transaction) => {
+      const txDocRef = doc(this.firestore, `transactions/${id}`);
+      const txSnap = await transaction.get(txDocRef);
+      if (!txSnap.exists()) throw new Error("Transaction does not exist!");
 
-    // Adjust client balance and apply fees on approval
-    if (newStatus === 'Approved') {
-      const txSnap = await getDoc(txDocRef);
-      const configSnap = await getDoc(doc(this.firestore, 'system/config'));
-      const config = configSnap.data() || {};
-      const transferFee = parseFloat(config['transferFee']?.toString().replace(/,/g, '')) || 0;
+      const txData = txSnap.data();
+      const currentStatus = txData['status'];
 
-      if (txSnap.exists()) {
-        const txData = txSnap.data();
+      // ADVANCED CONCEPT: Concurrency Control
+      // Prevent re-processing if already approved or rejected
+      if (currentStatus !== 'Pending' && newStatus !== currentStatus) {
+        throw new Error(`Transaction already ${currentStatus}`);
+      }
+
+      // 1. Update Transaction Status
+      const updateData: any = { status: newStatus };
+      if (processedBy) updateData.processedBy = processedBy;
+      transaction.update(txDocRef, updateData);
+
+      // 2. Log Staff Action (Notification)
+      const notifCollection = collection(this.firestore, 'notifications');
+      const newNotifDocRef = doc(notifCollection);
+      transaction.set(newNotifDocRef, {
+        source: 'Staff',
+        type: 'Transaction Review',
+        description: `${processedBy || 'Staff'} ${newStatus} transaction ID: ${id}`,
+        reference: id,
+        status: newStatus,
+        timestamp: new Date().getTime(),
+        date: new Date().toLocaleString()
+      });
+
+      // 3. Logic for Approved Transactions (Balance & Fees)
+      if (newStatus === 'Approved') {
+        const configDocRef = doc(this.firestore, 'system/config');
+        const configSnap = await transaction.get(configDocRef);
+        const config = configSnap.data() || {};
+        const transferFee = parseFloat(config['transferFee']?.toString().replace(/,/g, '')) || 0;
+
         const amountStr: string = txData['amount'] || '0';
         const numericAmount = parseFloat(amountStr.replace(/[^0-9.]/g, '')) || 0;
 
@@ -56,13 +93,32 @@ export class DatabaseService {
         const isTransfer = txData['category'] === 'Transfer';
 
         if (isTransfer) {
-          // Deduct Amount + Fee from sender
           if (senderId) {
-            await this.adjustBalance(senderId, -(numericAmount + transferFee));
+            const senderDocRef = doc(this.firestore, `clients/${senderId}`);
+            const senderSnap = await transaction.get(senderDocRef);
+            const currentBalance = senderSnap.data()?.['balance'] ?? 25000;
+            const totalDeduction = numericAmount + transferFee;
+
+            // ADVANCED CONCEPT: Data Integrity Constraint
+            if (currentBalance < totalDeduction) {
+              throw new Error("Insufficient funds for transfer and fees.");
+            }
+
+            transaction.update(senderDocRef, { balance: currentBalance - totalDeduction });
+
+            // Service Fee Log (History)
             if (transferFee > 0) {
-              await this.logSystemActivity('Service Fee', transferFee);
-              // Create a visible fee transaction for the client
-              await this.addTransaction({
+              const historyCol = collection(this.firestore, 'system_funds_history');
+              transaction.set(doc(historyCol), {
+                type: 'Service Fee',
+                amount: transferFee,
+                timestamp: new Date().getTime(),
+                date: new Date().toLocaleString()
+              });
+
+              // Create a visible fee transaction entry
+              const txCol = collection(this.firestore, 'transactions');
+              transaction.set(doc(txCol), {
                 title: `Service Fee (Ref: ${txData['reference'] || 'TXN'})`,
                 time: new Date().toLocaleString(),
                 amount: `- ₱ ${transferFee}`,
@@ -80,26 +136,36 @@ export class DatabaseService {
           }
 
           if (recipientId) {
-            // Client to client transfer
-            await this.adjustBalance(recipientId, numericAmount);
+            const recipientDocRef = doc(this.firestore, `clients/${recipientId}`);
+            const recipientSnap = await transaction.get(recipientDocRef);
+            const currentRecBal = recipientSnap.data()?.['balance'] ?? 25000;
+            transaction.update(recipientDocRef, { balance: currentRecBal + numericAmount });
           } else {
-            // Outbound transfer/bill payment
-            await this.logSystemActivity('Debit', numericAmount);
+            // Outbound
+            const historyCol = collection(this.firestore, 'system_funds_history');
+            transaction.set(doc(historyCol), {
+              type: 'Debit',
+              amount: numericAmount,
+              timestamp: new Date().getTime(),
+              date: new Date().toLocaleString()
+            });
           }
         } else if (isDeposit) {
-          if (senderId) await this.adjustBalance(senderId, numericAmount);
-          await this.logSystemActivity('Credit', numericAmount);
+          if (senderId) {
+            const senderDocRef = doc(this.firestore, `clients/${senderId}`);
+            const senderSnap = await transaction.get(senderDocRef);
+            const currentBal = senderSnap.data()?.['balance'] ?? 25000;
+            transaction.update(senderDocRef, { balance: currentBal + numericAmount });
+          }
+          const historyCol = collection(this.firestore, 'system_funds_history');
+          transaction.set(doc(historyCol), {
+            type: 'Credit',
+            amount: numericAmount,
+            timestamp: new Date().getTime(),
+            date: new Date().toLocaleString()
+          });
         }
       }
-    }
-
-    // Log staff action as notification for admin reports
-    await this.addNotification({
-      source: 'Staff',
-      type: 'Transaction Review',
-      description: `${processedBy || 'Staff'} ${newStatus} transaction ID: ${id}`,
-      reference: id,
-      status: newStatus
     });
   }
 
