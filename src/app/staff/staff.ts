@@ -2,7 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { DatabaseService } from '../services/database.service';
-import { Observable, map, combineLatest } from 'rxjs';
+import { BehaviorSubject, Observable, map, combineLatest } from 'rxjs';
 
 @Component({
   selector: 'app-staff',
@@ -22,6 +22,8 @@ export class StaffComponent implements OnInit {
   
   pendingTransactions$: Observable<any[]> = new Observable();
   selectedTx: any = null;
+  processingIds = new Set<string>();
+  private localUpdate$ = new BehaviorSubject<void>(undefined);
   
   stats = {
     pending: 0,
@@ -34,12 +36,13 @@ export class StaffComponent implements OnInit {
     this.userImage = '/images/staff.jpg';
     this.pendingTransactions$ = combineLatest([
       this.dbService.getTransactions(),
-      this.dbService.getUsers()
+      this.dbService.getUsers(),
+      this.localUpdate$
     ]).pipe(
-      map(([txs, users]: [any[], any[]]) => {
-        const pending = txs.filter((tx: any) => tx.status === 'Pending').sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
+      map(([txs, users]: [any[], any[], void]) => {
+        const pending = txs.filter((tx: any) => tx.status === 'Pending' && !this.processingIds.has(tx.id)).sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
         this.stats.pending = pending.length;
-        this.stats.processed = txs.filter((tx: any) => tx.status !== 'Pending').length;
+        this.stats.processed = txs.filter((tx: any) => tx.status !== 'Pending' || this.processingIds.has(tx.id)).length;
         
         const total = txs.reduce((acc: number, tx: any) => {
           const amt = parseFloat((tx.amount || '').replace(/[^0-9.]/g, '')) || 0;
@@ -86,12 +89,17 @@ export class StaffComponent implements OnInit {
     if (this.selectedTx?.id) {
       const txId = this.selectedTx.id;
       const prevTx = this.selectedTx;
-      // Optimistic update: clear selection immediately
-      this.selectedTx = null;
+      
+      this.processingIds.add(txId);
+      this.localUpdate$.next();
+      
       try {
         await this.dbService.updateTransactionStatus(txId, 'Approved', this.userName);
+        this.processingIds.delete(txId);
       } catch (err: any) {
+        this.processingIds.delete(txId);
         this.selectedTx = prevTx;
+        this.localUpdate$.next();
         alert('Error approving transaction: ' + err.message);
       }
     }
@@ -101,11 +109,17 @@ export class StaffComponent implements OnInit {
     if (this.selectedTx?.id) {
       const txId = this.selectedTx.id;
       const prevTx = this.selectedTx;
-      this.selectedTx = null;
+      
+      this.processingIds.add(txId);
+      this.localUpdate$.next();
+      
       try {
         await this.dbService.updateTransactionStatus(txId, 'Rejected', this.userName);
+        this.processingIds.delete(txId);
       } catch (err: any) {
+        this.processingIds.delete(txId);
         this.selectedTx = prevTx;
+        this.localUpdate$.next();
         alert('Error rejecting transaction: ' + err.message);
       }
     }

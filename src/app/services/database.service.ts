@@ -83,7 +83,14 @@ export class DatabaseService {
       }
 
       // --- 2. BUSINESS LOGIC & CONSTRAINTS ---
-      const updateData: any = { status: newStatus };
+      const currentTime = new Date().getTime();
+      const currentDateString = new Date().toLocaleString();
+      
+      const updateData: any = { 
+        status: newStatus,
+        timestamp: currentTime,
+        time: currentDateString
+      };
       if (processedBy) updateData.processedBy = processedBy;
 
       const notifData = {
@@ -92,8 +99,8 @@ export class DatabaseService {
         description: `${processedBy || 'Staff'} ${newStatus} transaction ID: ${id}`,
         reference: id,
         status: newStatus,
-        timestamp: new Date().getTime(),
-        date: new Date().toLocaleString()
+        timestamp: currentTime,
+        date: currentDateString
       };
 
       let senderNewBalance: number | null = null;
