@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, collectionData, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, setDoc, query, orderBy, runTransaction } from '@angular/fire/firestore';
+import { Firestore, collection, collectionData, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, setDoc, query, orderBy, runTransaction, writeBatch } from '@angular/fire/firestore';
 import { Observable, from, combineLatest, map } from 'rxjs';
 import { docData } from '@angular/fire/firestore';
 
@@ -9,6 +9,42 @@ import { docData } from '@angular/fire/firestore';
 export class DatabaseService {
   private firestore: Firestore = inject(Firestore);
 
+  constructor() {
+    this.cleanupGhostData();
+  }
+
+  async cleanupGhostData() {
+    try {
+      const txSnap = await getDocs(collection(this.firestore, 'transactions'));
+      txSnap.docs.forEach(d => {
+        const data = d.data();
+        const str = JSON.stringify(data).toLowerCase();
+        if (str.includes('jane doe') || str.includes('jane_doe') || d.id === 'jane_doe') {
+          deleteDoc(d.ref);
+        } else if (data['amount'] === '+ ₱ 1,000' && data['title'] === 'GCash (09171234567)' && data['category'] === 'Deposit') {
+          deleteDoc(d.ref);
+        }
+      });
+      const notifSnap = await getDocs(collection(this.firestore, 'notifications'));
+      notifSnap.docs.forEach(d => {
+        const str = JSON.stringify(d.data()).toLowerCase();
+        if (str.includes('jane doe') || str.includes('jane_doe') || d.id === 'jane_doe') deleteDoc(d.ref);
+      });
+      const msgSnap = await getDocs(collection(this.firestore, 'messages'));
+      msgSnap.docs.forEach(d => {
+        const str = JSON.stringify(d.data()).toLowerCase();
+        if (str.includes('jane doe') || str.includes('jane_doe') || d.id === 'jane_doe' || str.includes('cindy ma. lala')) deleteDoc(d.ref);
+      });
+      const clientsSnap = await getDocs(collection(this.firestore, 'clients'));
+      clientsSnap.docs.forEach(d => {
+        const str = JSON.stringify(d.data()).toLowerCase();
+        if (str.includes('jane doe') || str.includes('jane_doe') || d.id === 'jane_doe') deleteDoc(d.ref);
+      });
+    } catch (e) {
+      console.error('Error cleaning up ghost data:', e);
+    }
+  }
+
   // --- TRANSACTIONS ---
   getTransactions(): Observable<any[]> {
     const txCollection = collection(this.firestore, 'transactions');
@@ -16,192 +52,194 @@ export class DatabaseService {
   }
 
   async addTransaction(txData: any) {
-    return await runTransaction(this.firestore, async (transaction) => {
-      const txCollection = collection(this.firestore, 'transactions');
-      const newTxDocRef = doc(txCollection); // Pre-generate doc reference
-      const timestamp = new Date().getTime();
+    const batch = writeBatch(this.firestore);
+    const txCollection = collection(this.firestore, 'transactions');
+    const newTxDocRef = doc(txCollection); // Pre-generate doc reference
+    const timestamp = new Date().getTime();
 
-      // 1. Write the Transaction
-      transaction.set(newTxDocRef, {
-        ...txData,
-        timestamp: timestamp
-      });
-
-      // 2. Write the Notification (Atomic Audit Trail)
-      const notifCollection = collection(this.firestore, 'notifications');
-      const newNotifDocRef = doc(notifCollection);
-      transaction.set(newNotifDocRef, {
-        source: 'Client',
-        type: txData.category || 'Transaction',
-        description: `${txData.title} submitted a ${txData.category || 'Transaction'} of ${txData.amount}`,
-        reference: txData.reference || newTxDocRef.id,
-        status: 'Pending',
-        timestamp: timestamp,
-        date: new Date().toLocaleString()
-      });
-
-      return newTxDocRef;
+    // 1. Write the Transaction
+    batch.set(newTxDocRef, {
+      ...txData,
+      timestamp: timestamp
     });
+
+    // 2. Write the Notification (Atomic Audit Trail)
+    const notifCollection = collection(this.firestore, 'notifications');
+    const newNotifDocRef = doc(notifCollection);
+    batch.set(newNotifDocRef, {
+      source: 'Client',
+      type: txData.category || 'Transaction',
+      description: `${txData.title} submitted a ${txData.category || 'Transaction'} of ${txData.amount}`,
+      reference: txData.reference || newTxDocRef.id,
+      status: 'Pending',
+      timestamp: timestamp,
+      date: new Date().toLocaleString()
+    });
+
+    await batch.commit();
+    return newTxDocRef;
   }
 
   async updateTransactionStatus(id: string, newStatus: string, processedBy: string = '') {
-    await runTransaction(this.firestore, async (transaction) => {
-      // --- 1. ALL READS ---
-      const txDocRef = doc(this.firestore, `transactions/${id}`);
-      const txSnap = await transaction.get(txDocRef);
-      if (!txSnap.exists()) throw new Error("Transaction does not exist!");
+    // --- 1. ALL READS ---
+    const txDocRef = doc(this.firestore, `transactions/${id}`);
+    const txSnap = await getDoc(txDocRef);
+    if (!txSnap.exists()) throw new Error("Transaction does not exist!");
 
-      const txData = txSnap.data();
-      const currentStatus = txData['status'];
+    const txData = txSnap.data();
+    const currentStatus = txData['status'];
 
-      if (currentStatus !== 'Pending' && newStatus !== currentStatus) {
-        throw new Error(`Transaction already ${currentStatus}`);
+    if (currentStatus !== 'Pending' && newStatus !== currentStatus) {
+      throw new Error(`Transaction already ${currentStatus}`);
+    }
+
+    let configSnap: any = null;
+    let senderSnap: any = null;
+    let recipientSnap: any = null;
+
+    const isDeposit = txData['category'] === 'Deposit';
+    const isTransfer = txData['category'] === 'Transfer';
+    const senderId = txData['senderId'];
+    const recipientId = txData['recipientId'];
+
+    if (newStatus === 'Approved') {
+      const configDocRef = doc(this.firestore, 'system/config');
+      configSnap = await getDoc(configDocRef);
+
+      if (senderId) {
+        const senderDocRef = doc(this.firestore, `clients/${senderId}`);
+        senderSnap = await getDoc(senderDocRef);
       }
 
-      let configSnap: any = null;
-      let senderSnap: any = null;
-      let recipientSnap: any = null;
+      if (recipientId && isTransfer) {
+        const recipientDocRef = doc(this.firestore, `clients/${recipientId}`);
+        recipientSnap = await getDoc(recipientDocRef);
+      }
+    }
 
-      const isDeposit = txData['category'] === 'Deposit';
-      const isTransfer = txData['category'] === 'Transfer';
-      const senderId = txData['senderId'];
-      const recipientId = txData['recipientId'];
+    // --- 2. BUSINESS LOGIC & CONSTRAINTS ---
+    const currentTime = new Date().getTime();
+    const currentDateString = new Date().toLocaleString();
+    
+    const updateData: any = { 
+      status: newStatus,
+      processedAt: currentTime,
+      processedTime: currentDateString
+    };
+    if (processedBy) updateData.processedBy = processedBy;
 
-      if (newStatus === 'Approved') {
-        const configDocRef = doc(this.firestore, 'system/config');
-        configSnap = await transaction.get(configDocRef);
+    const notifData = {
+      source: 'Staff',
+      type: 'Transaction Review',
+      description: `${processedBy || 'Staff'} ${newStatus} transaction ID: ${id}`,
+      reference: id,
+      status: newStatus,
+      timestamp: currentTime,
+      date: currentDateString
+    };
 
-        if (senderId) {
-          const senderDocRef = doc(this.firestore, `clients/${senderId}`);
-          senderSnap = await transaction.get(senderDocRef);
+    let senderNewBalance: number | null = null;
+    let recipientNewBalance: number | null = null;
+    let transferFeeAmount: number = 0;
+    let numericAmount: number = 0;
+
+    if (newStatus === 'Approved') {
+      const config = configSnap?.data() || {};
+      transferFeeAmount = parseFloat(config['transferFee']?.toString().replace(/,/g, '')) || 0;
+
+      const amountStr: string = txData['amount'] || '0';
+      numericAmount = parseFloat(amountStr.replace(/[^0-9.]/g, '')) || 0;
+
+      if (isTransfer) {
+        if (senderId && senderSnap?.exists()) {
+          const currentBalance = senderSnap.data()?.['balance'] ?? 25000;
+          const totalDeduction = numericAmount + transferFeeAmount;
+
+          if (currentBalance < totalDeduction) {
+            throw new Error("Insufficient funds for transfer and fees.");
+          }
+          senderNewBalance = currentBalance - totalDeduction;
         }
 
-        if (recipientId && isTransfer) {
-          const recipientDocRef = doc(this.firestore, `clients/${recipientId}`);
-          recipientSnap = await transaction.get(recipientDocRef);
+        if (recipientId && recipientSnap?.exists()) {
+          const currentRecBal = recipientSnap.data()?.['balance'] ?? 25000;
+          recipientNewBalance = currentRecBal + numericAmount;
+        }
+      } else if (isDeposit) {
+        if (senderId && senderSnap?.exists()) {
+          const currentBal = senderSnap.data()?.['balance'] ?? 25000;
+          senderNewBalance = currentBal + numericAmount;
         }
       }
+    }
 
-      // --- 2. BUSINESS LOGIC & CONSTRAINTS ---
-      const currentTime = new Date().getTime();
-      const currentDateString = new Date().toLocaleString();
+    // --- 3. ALL WRITES ---
+    const batch = writeBatch(this.firestore);
+
+    // Transaction status
+    batch.update(txDocRef, updateData);
+
+    // Notification
+    const notifCollection = collection(this.firestore, 'notifications');
+    batch.set(doc(notifCollection), notifData);
+
+    if (newStatus === 'Approved') {
+      if (senderNewBalance !== null && senderId) {
+        batch.update(doc(this.firestore, `clients/${senderId}`), { balance: senderNewBalance });
+      }
       
-      const updateData: any = { 
-        status: newStatus,
-        timestamp: currentTime,
-        time: currentDateString
-      };
-      if (processedBy) updateData.processedBy = processedBy;
-
-      const notifData = {
-        source: 'Staff',
-        type: 'Transaction Review',
-        description: `${processedBy || 'Staff'} ${newStatus} transaction ID: ${id}`,
-        reference: id,
-        status: newStatus,
-        timestamp: currentTime,
-        date: currentDateString
-      };
-
-      let senderNewBalance: number | null = null;
-      let recipientNewBalance: number | null = null;
-      let transferFeeAmount: number = 0;
-      let numericAmount: number = 0;
-
-      if (newStatus === 'Approved') {
-        const config = configSnap?.data() || {};
-        transferFeeAmount = parseFloat(config['transferFee']?.toString().replace(/,/g, '')) || 0;
-
-        const amountStr: string = txData['amount'] || '0';
-        numericAmount = parseFloat(amountStr.replace(/[^0-9.]/g, '')) || 0;
-
-        if (isTransfer) {
-          if (senderId && senderSnap?.exists()) {
-            const currentBalance = senderSnap.data()?.['balance'] ?? 25000;
-            const totalDeduction = numericAmount + transferFeeAmount;
-
-            if (currentBalance < totalDeduction) {
-              throw new Error("Insufficient funds for transfer and fees.");
-            }
-            senderNewBalance = currentBalance - totalDeduction;
-          }
-
-          if (recipientId && recipientSnap?.exists()) {
-            const currentRecBal = recipientSnap.data()?.['balance'] ?? 25000;
-            recipientNewBalance = currentRecBal + numericAmount;
-          }
-        } else if (isDeposit) {
-          if (senderId && senderSnap?.exists()) {
-            const currentBal = senderSnap.data()?.['balance'] ?? 25000;
-            senderNewBalance = currentBal + numericAmount;
-          }
-        }
+      if (recipientNewBalance !== null && recipientId) {
+        batch.update(doc(this.firestore, `clients/${recipientId}`), { balance: recipientNewBalance });
       }
 
-      // --- 3. ALL WRITES ---
-      // Transaction status
-      transaction.update(txDocRef, updateData);
-
-      // Notification
-      const notifCollection = collection(this.firestore, 'notifications');
-      transaction.set(doc(notifCollection), notifData);
-
-      if (newStatus === 'Approved') {
-        if (senderNewBalance !== null && senderId) {
-          transaction.update(doc(this.firestore, `clients/${senderId}`), { balance: senderNewBalance });
-        }
-        
-        if (recipientNewBalance !== null && recipientId) {
-          transaction.update(doc(this.firestore, `clients/${recipientId}`), { balance: recipientNewBalance });
-        }
-
-        if (isTransfer) {
-          if (senderId && transferFeeAmount > 0) {
-            const historyCol = collection(this.firestore, 'system_funds_history');
-            transaction.set(doc(historyCol), {
-              type: 'Service Fee',
-              amount: transferFeeAmount,
-              timestamp: new Date().getTime(),
-              date: new Date().toLocaleString()
-            });
-
-            const txCol = collection(this.firestore, 'transactions');
-            transaction.set(doc(txCol), {
-              title: `Service Fee (Ref: ${txData['reference'] || 'TXN'})`,
-              time: new Date().toLocaleString(),
-              amount: `- ₱ ${transferFeeAmount}`,
-              color: 'bg-red',
-              icon: 'F',
-              status: 'Approved',
-              category: 'Service Fee',
-              reference: 'FEE-' + Math.floor(Math.random() * 1000000),
-              senderId: senderId,
-              recipientId: 'SYSTEM',
-              timestamp: new Date().getTime(),
-              processedBy: processedBy || 'System (Auto)'
-            });
-          }
-
-          if (!recipientId) {
-            const historyCol = collection(this.firestore, 'system_funds_history');
-            transaction.set(doc(historyCol), {
-              type: 'Debit',
-              amount: numericAmount,
-              timestamp: new Date().getTime(),
-              date: new Date().toLocaleString()
-            });
-          }
-        } else if (isDeposit) {
+      if (isTransfer) {
+        if (senderId && transferFeeAmount > 0) {
           const historyCol = collection(this.firestore, 'system_funds_history');
-          transaction.set(doc(historyCol), {
-            type: 'Credit',
+          batch.set(doc(historyCol), {
+            type: 'Service Fee',
+            amount: transferFeeAmount,
+            timestamp: new Date().getTime(),
+            date: new Date().toLocaleString()
+          });
+
+          const txCol = collection(this.firestore, 'transactions');
+          batch.set(doc(txCol), {
+            title: `Service Fee (Ref: ${txData['reference'] || 'TXN'})`,
+            time: new Date().toLocaleString(),
+            amount: `- ₱ ${transferFeeAmount}`,
+            color: 'bg-red',
+            icon: 'F',
+            status: 'Approved',
+            category: 'Service Fee',
+            reference: 'FEE-' + Math.floor(Math.random() * 1000000),
+            senderId: senderId,
+            recipientId: 'SYSTEM',
+            timestamp: new Date().getTime(),
+            processedBy: processedBy || 'System (Auto)'
+          });
+        }
+
+        if (!recipientId) {
+          const historyCol = collection(this.firestore, 'system_funds_history');
+          batch.set(doc(historyCol), {
+            type: 'Debit',
             amount: numericAmount,
             timestamp: new Date().getTime(),
             date: new Date().toLocaleString()
           });
         }
+      } else if (isDeposit) {
+        const historyCol = collection(this.firestore, 'system_funds_history');
+        batch.set(doc(historyCol), {
+          type: 'Credit',
+          amount: numericAmount,
+          timestamp: new Date().getTime(),
+          date: new Date().toLocaleString()
+        });
       }
-    });
+    }
+
+    await batch.commit();
   }
 
   // --- CLIENT BALANCE ---
@@ -410,36 +448,40 @@ export class DatabaseService {
 
   // --- ADMIN RESET ---
   async resetSystemData() {
+    const batch = writeBatch(this.firestore);
+
     const txSnap = await getDocs(collection(this.firestore, 'transactions'));
-    await Promise.all(txSnap.docs.map(d => deleteDoc(d.ref)));
+    txSnap.docs.forEach(d => batch.delete(d.ref));
 
     const notifSnap = await getDocs(collection(this.firestore, 'notifications'));
-    await Promise.all(notifSnap.docs.map(d => deleteDoc(d.ref)));
+    notifSnap.docs.forEach(d => batch.delete(d.ref));
 
     const sysHistorySnap = await getDocs(collection(this.firestore, 'system_funds_history'));
-    await Promise.all(sysHistorySnap.docs.map(d => deleteDoc(d.ref)));
+    sysHistorySnap.docs.forEach(d => batch.delete(d.ref));
 
     const msgSnap = await getDocs(collection(this.firestore, 'messages'));
-    await Promise.all(msgSnap.docs.map(d => deleteDoc(d.ref)));
+    msgSnap.docs.forEach(d => batch.delete(d.ref));
 
     const clientsSnap = await getDocs(collection(this.firestore, 'clients'));
-    await Promise.all(clientsSnap.docs.map(d => deleteDoc(d.ref)));
+    clientsSnap.docs.forEach(d => batch.delete(d.ref));
 
     const staffSnap = await getDocs(collection(this.firestore, 'staff'));
-    await Promise.all(staffSnap.docs.map(d => deleteDoc(d.ref)));
+    staffSnap.docs.forEach(d => batch.delete(d.ref));
 
     const adminSnap = await getDocs(collection(this.firestore, 'admin'));
-    await Promise.all(adminSnap.docs.map(d => deleteDoc(d.ref)));
+    adminSnap.docs.forEach(d => batch.delete(d.ref));
 
     // Reset client balances to 25000 and include phone numbers
-    await setDoc(doc(this.firestore, 'clients/excel_john'), { balance: 25000, name: 'Excel John', email: 'client@cico.com', phone: '09171234567' });
-    await setDoc(doc(this.firestore, 'clients/elliara_liv'), { balance: 25000, name: 'Elliara Liv', email: 'client2@cico.com', phone: '09189876543' });
+    batch.set(doc(this.firestore, 'clients/excel_john'), { balance: 25000, name: 'Excel John', email: 'client@cico.com', phone: '09171234567' });
+    batch.set(doc(this.firestore, 'clients/elliara_liv'), { balance: 25000, name: 'Elliara Liv', email: 'client2@cico.com', phone: '09189876543' });
 
     // Reset System Reserves
-    await setDoc(doc(this.firestore, 'system/config'), { total_reserves: 1200000 });
+    batch.set(doc(this.firestore, 'system/config'), { total_reserves: 1200000 });
 
     // Ensure staff and admin exist
-    await setDoc(doc(this.firestore, 'staff/staff_1'), { name: 'Cindy Ma. Lala', email: 'staff@cico.com', role: 'Staff', status: 'Active', phone: '0920 123 4567' });
-    await setDoc(doc(this.firestore, 'admin/admin_1'), { name: 'Hawk M. Beat', email: 'admin@cico.com', role: 'Admin', status: 'Active', phone: '0999 888 7777' });
+    batch.set(doc(this.firestore, 'staff/staff_1'), { name: 'Cindy Ma. Lala', email: 'staff@cico.com', role: 'Staff', status: 'Active', phone: '0920 123 4567' });
+    batch.set(doc(this.firestore, 'admin/admin_1'), { name: 'Hawk M. Beat', email: 'admin@cico.com', role: 'Admin', status: 'Active', phone: '0999 888 7777' });
+
+    await batch.commit();
   }
 }

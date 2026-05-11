@@ -30,9 +30,7 @@ export class AdminDashboardComponent implements OnInit {
     this.userName = localStorage.getItem('currentUserName') || 'Hawk M. Beat';
     this.userImage = '/images/admin.jpg';
     this.dbService.initSystemConfig();
-    this.users$ = this.dbService.getUsers().pipe(
-      map(users => users.filter(user => user.name !== 'Jane Doe'))
-    );
+    this.users$ = this.dbService.getUsers();
     
     this.systemStats$ = this.dbService.getSystemStats();
 

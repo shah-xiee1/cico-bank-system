@@ -111,7 +111,7 @@ export class Reports implements OnInit {
 
   getStatusBadgeClass(status: string): string {
     if (status === 'Approved') return 'success';
-    if (status === 'Rejected') return 'blocked';
+    if (status === 'Rejected') return 'rejected';
     return 'pending';
   }
 }

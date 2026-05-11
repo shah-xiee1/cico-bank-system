@@ -101,7 +101,7 @@ export class ClientTransactionsComponent implements OnInit {
 
   getStatusClass(status: string) {
     if (status === 'Approved') return 'success';
-    if (status === 'Rejected') return 'blocked';
+    if (status === 'Rejected') return 'rejected';
     return 'pending';
   }
 }

@@ -39,8 +39,8 @@ export class StaffMessagesComponent implements OnInit {
           if (!m.clientId) return;
 
           const clientUser = users.find(u => u.id === m.clientId);
-          // FIX: Skip conversations for non-existent clients or known 'ghost' users (e.g. Jane Doe)
-          if (!clientUser || clientUser.name === 'Jane Doe') return; 
+          // FIX: Skip conversations for non-existent clients
+          if (!clientUser) return; 
 
           if (!grouped.has(m.clientId)) {
             grouped.set(m.clientId, {
