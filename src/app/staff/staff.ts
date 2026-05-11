@@ -85,17 +85,29 @@ export class StaffComponent implements OnInit {
   async approveTx() {
     if (this.selectedTx?.id) {
       const txId = this.selectedTx.id;
+      const prevTx = this.selectedTx;
       // Optimistic update: clear selection immediately
       this.selectedTx = null;
-      await this.dbService.updateTransactionStatus(txId, 'Approved', this.userName);
+      try {
+        await this.dbService.updateTransactionStatus(txId, 'Approved', this.userName);
+      } catch (err: any) {
+        this.selectedTx = prevTx;
+        alert('Error approving transaction: ' + err.message);
+      }
     }
   }
 
   async rejectTx() {
     if (this.selectedTx?.id) {
       const txId = this.selectedTx.id;
+      const prevTx = this.selectedTx;
       this.selectedTx = null;
-      await this.dbService.updateTransactionStatus(txId, 'Rejected', this.userName);
+      try {
+        await this.dbService.updateTransactionStatus(txId, 'Rejected', this.userName);
+      } catch (err: any) {
+        this.selectedTx = prevTx;
+        alert('Error rejecting transaction: ' + err.message);
+      }
     }
   }
 }

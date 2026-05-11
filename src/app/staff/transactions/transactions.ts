@@ -119,15 +119,29 @@ export class Transactions implements OnInit {
   async approveTx(tx: TxData) {
     if (tx.id) {
       // Close immediately for snappy UI
-      if (this.selectedTx?.id === tx.id) this.closeModal();
-      await this.dbService.updateTransactionStatus(tx.id, 'Approved', this.userName);
+      const wasSelected = this.selectedTx?.id === tx.id;
+      if (wasSelected) this.closeModal();
+      
+      try {
+        await this.dbService.updateTransactionStatus(tx.id, 'Approved', this.userName);
+      } catch (err: any) {
+        if (wasSelected) this.openModal(tx);
+        alert('Error approving transaction: ' + err.message);
+      }
     }
   }
 
   async rejectTx(tx: TxData) {
     if (tx.id) {
-      if (this.selectedTx?.id === tx.id) this.closeModal();
-      await this.dbService.updateTransactionStatus(tx.id, 'Rejected', this.userName);
+      const wasSelected = this.selectedTx?.id === tx.id;
+      if (wasSelected) this.closeModal();
+      
+      try {
+        await this.dbService.updateTransactionStatus(tx.id, 'Rejected', this.userName);
+      } catch (err: any) {
+        if (wasSelected) this.openModal(tx);
+        alert('Error rejecting transaction: ' + err.message);
+      }
     }
   }
 
