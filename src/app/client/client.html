@@ -10,7 +10,7 @@
       <img [src]="currentUserImage" class="avatar-sm" [alt]="currentUserName">
       <div class="info">
         <p class="name">{{ currentUserName }}</p>
-        <p class="role">{{ fullPhone$ | async }}</p>
+        <p class="role">{{ currentUserAccountNumber$ | async }}</p>
       </div>
     </div>
 
@@ -76,8 +76,11 @@
           </ng-template>
         </div>
         <div class="card-footer">
-          <div class="card-number">{{ currentUserPhone$ | async }}</div>
-          <div class="card-brand">CICO VISA</div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div class="card-number" style="letter-spacing: 2px; font-weight: bold; margin: 0; font-size: 1.1rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">{{ currentUserAccountNumber$ | async }}</div>
+            <div style="font-size: 0.72rem; opacity: 0.85; letter-spacing: 0.5px;">Phone: {{ fullPhone$ | async }}</div>
+          </div>
+          <div class="card-brand" style="font-weight: 700; letter-spacing: 1px;">CICO BANK</div>
         </div>
       </div>
 
@@ -146,6 +149,18 @@
             <span>Merchant / Sender</span>
             <strong>{{ selectedTx.title }}</strong>
           </div>
+          <div class="receipt-row" *ngIf="selectedTx.paymentSource">
+            <span>Payment Source</span>
+            <strong>{{ selectedTx.paymentSource }}</strong>
+          </div>
+          <div class="receipt-row" *ngIf="selectedTx.recipientBank">
+            <span>Recipient Bank / Wallet</span>
+            <strong>{{ selectedTx.recipientBank }}</strong>
+          </div>
+          <div class="receipt-row" *ngIf="selectedTx.serviceFee !== undefined">
+            <span>Service Fee</span>
+            <strong>₱ {{ selectedTx.serviceFee | number:'1.2-2' }}</strong>
+          </div>
           <div class="receipt-row">
             <span>Category</span>
             <strong>{{ selectedTx.category }}</strong>
@@ -170,19 +185,42 @@
       </div>
       <div class="modal-body">
         <div class="input-group">
-          <label>Recipient Phone Number</label>
-          <input type="text" #sendPhone placeholder="e.g. 09XX XXX XXXX">
+          <label>Payment Source</label>
+          <select [(ngModel)]="paymentSource" (change)="updateServiceFee()" class="premium-select">
+            <option value="CICO Bank Balance">CICO Bank Balance</option>
+            <option value="GCash">GCash</option>
+            <option value="Maya">Maya</option>
+            <option value="LandBank">LandBank</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Recipient Bank / Wallet</label>
+          <select [(ngModel)]="recipientBank" (change)="updateServiceFee()" class="premium-select">
+            <option value="CICO Bank">CICO Bank</option>
+            <option value="GCash">GCash</option>
+            <option value="Maya">Maya</option>
+            <option value="LandBank">LandBank</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>{{ getRecipientLabel() }}</label>
+          <input type="text" #sendPhone [placeholder]="getRecipientPlaceholder()" (input)="onRecipientInput($event)">
         </div>
         <div class="input-group">
           <label>Amount (PHP)</label>
           <input type="text" #sendAmount placeholder="0.00" (input)="formatAmount($event)">
         </div>
-        <div class="input-group">
-          <label>Payment Source</label>
-          <select>
-            <option>CICO Bank Balance</option>
-          </select>
+        
+        <!-- Premium Live Service Fee Indicator -->
+        <div style="margin-bottom: 20px; font-size: 0.88rem; display: flex; align-items: center;">
+          <div *ngIf="serviceFee === 0" style="background: #e6fcf5; color: #0ca678; padding: 8px 14px; border-radius: 8px; border-left: 4px solid #0ca678; font-weight: 600; width: 100%; display: flex; align-items: center; gap: 8px;">
+            Service Fee: ₱ 0.00
+          </div>
+          <div *ngIf="serviceFee > 0" style="background: #f8fafc; color: #475569; padding: 8px 14px; border-radius: 8px; border-left: 4px solid #94a3b8; font-weight: 600; width: 100%; display: flex; align-items: center; gap: 8px;">
+            Service Fee: ₱ {{ serviceFee | number:'1.2-2' }}
+          </div>
         </div>
+
         <button class="btn-primary" (click)="initiateTransaction('send', sendAmount.value, sendPhone.value)">Send Funds</button>
       </div>
     </div>

@@ -28,6 +28,11 @@ export class ClientComponent implements OnInit {
   showOtpModal = false;
   selectedTx: any = null;
 
+  paymentSource = 'CICO Bank Balance';
+  recipientBank = 'CICO Bank';
+  serviceFee = 0.00;
+  currentUserAccountNumber$!: Observable<string>;
+
   otpInput: string = '';
   pendingTxDetails: any = null;
   generatedOtp = '';
@@ -60,7 +65,7 @@ export class ClientComponent implements OnInit {
       map(([txs, users]: [any[], any[]]) => {
         const filtered = txs.filter((tx: any) => 
           tx.senderId === this.currentUserId || 
-          (tx.recipientId === this.currentUserId && tx.status === 'Approved')
+          (tx.recipientId === this.currentUserId && (tx.status === 'Approved' || tx.status === 'Refunded'))
         );
 
         return filtered.map((tx: any) => {
@@ -118,7 +123,16 @@ export class ClientComponent implements OnInit {
         return me?.phone || '0900 000 0000';
       })
     );
-    this.dbService.getSystemConfig().subscribe(config => this.systemConfig = config);
+    this.currentUserAccountNumber$ = this.dbService.getUsers().pipe(
+      map((users: any[]) => {
+        const me = users.find((u: any) => u.id === this.currentUserId);
+        return me?.accountNumber || 'CICO-XXXX-XXXX';
+      })
+    );
+    this.dbService.getSystemConfig().subscribe(config => {
+      this.systemConfig = config;
+      this.updateServiceFee();
+    });
     this.dbService.getClientBalance(this.currentUserId).subscribe((data: any) => {
       if (data) {
         this.currentUserEmail = data.email || (this.currentUserId === 'excel_john' ? 'client@cico.com' : 'client2@cico.com');
@@ -136,6 +150,49 @@ export class ClientComponent implements OnInit {
     this.otpInput = '';
   }
 
+  updateServiceFee() {
+    if (this.paymentSource === 'CICO Bank Balance' && this.recipientBank === 'CICO Bank') {
+      this.serviceFee = 0;
+    } else {
+      this.serviceFee = parseFloat(this.systemConfig?.transferFee?.toString().replace(/,/g, '')) || 15.00;
+    }
+  }
+
+  getRecipientLabel(): string {
+    if (this.recipientBank === 'CICO Bank') return 'Recipient CICO Account Number';
+    if (this.recipientBank === 'GCash' || this.recipientBank === 'Maya') return 'Recipient Phone Number';
+    return 'Recipient Account Number';
+  }
+
+  getRecipientPlaceholder(): string {
+    if (this.recipientBank === 'CICO Bank') return 'e.g. CICO-XXXX-XXXX';
+    if (this.recipientBank === 'GCash' || this.recipientBank === 'Maya') return 'e.g. 09XX XXX XXXX';
+    return 'e.g. 10 or 12 digit Account Number';
+  }
+
+  onRecipientInput(event: any) {
+    if (this.recipientBank === 'CICO Bank') {
+      let val = event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (val && !val.startsWith('CICO')) {
+        if (/^\d/.test(val)) {
+          val = 'CICO' + val;
+        }
+      }
+      let digits = val.substring(4).replace(/[^0-9]/g, '');
+      if (digits.length > 8) {
+        digits = digits.substring(0, 8);
+      }
+      let formatted = 'CICO';
+      if (digits.length > 0) {
+        formatted += '-' + digits.substring(0, 4);
+      }
+      if (digits.length > 4) {
+        formatted += '-' + digits.substring(4, 8);
+      }
+      event.target.value = formatted;
+    }
+  }
+
   closeModals() {
     this.showSendModal = false;
     this.showDepositModal = false;
@@ -145,6 +202,9 @@ export class ClientComponent implements OnInit {
     this.pendingTxDetails = null;
     this.otpInput = '';
     this.showMockEmailToast = false;
+    this.paymentSource = 'CICO Bank Balance';
+    this.recipientBank = 'CICO Bank';
+    this.updateServiceFee();
     if (this.toastTimeoutId) {
       clearTimeout(this.toastTimeoutId);
       this.toastTimeoutId = null;
@@ -158,18 +218,43 @@ export class ClientComponent implements OnInit {
     }
   }
 
-  initiateTransaction(type: string, amount: string, primary: string, secondary: string = '') {
+  async initiateTransaction(type: string, amount: string, primary: string, secondary: string = '') {
     if(!amount || !primary) {
       alert('Please fill out all required fields.');
       return;
     }
 
     const numericAmount = parseFloat(amount.replace(/,/g, '')) || 0;
+
+    // Perform validation for CICO Bank account format and existence
+    if (type === 'send' && this.recipientBank === 'CICO Bank') {
+      const cicoFormatRegex = /^CICO-\d{4}-\d{4}$/;
+      if (!cicoFormatRegex.test(primary)) {
+        alert('Invalid account format! Please ensure the recipient account number follows the CICO-XXXX-XXXX format.');
+        return;
+      }
+
+      const clients = await firstValueFrom(this.otherClients$);
+      const target = clients.find(c => (c.accountNumber || '').replace(/\s/g, '') === primary.replace(/\s/g, ''));
+      if (!target) {
+        // Check if transferring to self
+        const currentUserData = await firstValueFrom(this.dbService.getClientBalance(this.currentUserId));
+        if (currentUserData && currentUserData.accountNumber === primary.replace(/\s/g, '')) {
+          alert('Transaction Denied! You cannot transfer to your own CICO Bank account.');
+          return;
+        }
+        alert(`Transaction Denied! The CICO Bank account number "${primary}" does not exist.`);
+        return;
+      }
+    }
     
-    // Check for insufficient funds
-    if (type === 'send' && numericAmount > this.currentBalanceNumeric) {
-      alert(`Insufficient funds! Your current balance is ₱ ${this.currentBalanceNumeric.toLocaleString()}. You cannot send ₱ ${numericAmount.toLocaleString()}.`);
-      return;
+    // Check for insufficient funds only if sending from CICO Bank Balance
+    if (type === 'send' && this.paymentSource === 'CICO Bank Balance') {
+      const totalRequired = numericAmount + this.serviceFee;
+      if (totalRequired > this.currentBalanceNumeric) {
+        alert(`Insufficient funds! Your current balance is ₱ ${this.currentBalanceNumeric.toLocaleString()}. You need ₱ ${totalRequired.toLocaleString()} (including ₱ ${this.serviceFee} service fee) to complete this transfer.`);
+        return;
+      }
     }
 
     // Check for Global Transfer Limit
@@ -180,9 +265,16 @@ export class ClientComponent implements OnInit {
       return;
     }
 
-    // type='send': primary=phone, secondary=''
-    // type='deposit': primary=method, secondary=phone
-    this.pendingTxDetails = { type, amount, primary, secondary };
+    // type='send': primary=phone/account, secondary=''
+    this.pendingTxDetails = { 
+      type, 
+      amount, 
+      primary, 
+      secondary,
+      paymentSource: this.paymentSource,
+      recipientBank: this.recipientBank,
+      serviceFee: this.serviceFee
+    };
     
     // Hide all form modals and show OTP modal
     this.showSendModal = false;
@@ -203,7 +295,7 @@ export class ClientComponent implements OnInit {
 
     if (!this.pendingTxDetails) return;
 
-    const { type, amount, primary, secondary } = this.pendingTxDetails;
+    const { type, amount, primary, secondary, paymentSource, recipientBank, serviceFee } = this.pendingTxDetails;
 
     // Optimistic Update: Close modal immediately
     this.closeModals();
@@ -214,13 +306,17 @@ export class ClientComponent implements OnInit {
     let finalTitle = '';
 
     if (type === 'send') {
-      const clients = await firstValueFrom(this.otherClients$);
-      const target = clients.find(c => (c.phone || '').replace(/\s/g, '') === primary.replace(/\s/g, ''));
-      if (target) {
-        targetRecipientId = target.id;
-        finalTitle = `${target.name} (${target.phone})`;
+      if (recipientBank === 'CICO Bank') {
+        const clients = await firstValueFrom(this.otherClients$);
+        const target = clients.find(c => (c.accountNumber || '').replace(/\s/g, '') === primary.replace(/\s/g, ''));
+        if (target) {
+          targetRecipientId = target.id;
+          finalTitle = `${target.name} (${target.accountNumber})`;
+        } else {
+          finalTitle = `${primary} (CICO Bank)`;
+        }
       } else {
-        finalTitle = `${primary} (Transfer)`;
+        finalTitle = `${recipientBank} (${primary})`;
       }
     } else {
       finalTitle = `${primary} (${secondary})`;
@@ -237,7 +333,10 @@ export class ClientComponent implements OnInit {
       reference: 'TXN-' + Math.floor(Math.random() * 1000000),
       senderId: this.currentUserId,
       recipientId: targetRecipientId,
-      timestamp: new Date().getTime()
+      timestamp: new Date().getTime(),
+      paymentSource: paymentSource || 'CICO Bank Balance',
+      recipientBank: recipientBank || 'CICO Bank',
+      serviceFee: serviceFee !== undefined ? serviceFee : 0
     };
 
     const txRef = await this.dbService.addTransaction(txData);

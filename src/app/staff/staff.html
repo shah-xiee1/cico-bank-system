@@ -95,7 +95,11 @@
         <div class="details-card" *ngIf="selectedTx; else noSelection">
           <div class="tx-header">
             <h2>{{ selectedTx.category || 'Transaction' }}</h2>
-            <span class="badge" [class.pending]="selectedTx.status==='Pending'">{{ selectedTx.status }}</span>
+            <span class="badge" 
+                  [class.approved]="selectedTx.status==='Approved'" 
+                  [class.rejected]="selectedTx.status==='Refunded' || selectedTx.status==='Rejected'">
+              {{ selectedTx.status }}
+            </span>
           </div>
           
           <div class="tx-data-grid">

@@ -153,7 +153,10 @@
       </div>
       <div class="tx-modal-info-grid">
         <div class="tx-info-item"><span class="tx-info-label">Sender</span><span class="tx-info-value">{{ selectedTx.senderName }}</span></div>
+        <div class="tx-info-item" *ngIf="selectedTx.paymentSource"><span class="tx-info-label">Payment Source</span><span class="tx-info-value">{{ selectedTx.paymentSource }}</span></div>
         <div class="tx-info-item"><span class="tx-info-label">Recipient</span><span class="tx-info-value">{{ selectedTx.recipientName }}</span></div>
+        <div class="tx-info-item" *ngIf="selectedTx.recipientBank"><span class="tx-info-label">Recipient Bank</span><span class="tx-info-value">{{ selectedTx.recipientBank }}</span></div>
+        <div class="tx-info-item" *ngIf="selectedTx.serviceFee !== undefined"><span class="tx-info-label">Service Fee</span><span class="tx-info-value">₱ {{ selectedTx.serviceFee | number:'1.2-2' }}</span></div>
         <div class="tx-info-item"><span class="tx-info-label">Reference</span><span class="tx-info-value">{{ selectedTx.desc }}</span></div>
         <div class="tx-info-item"><span class="tx-info-label">Type</span><span class="tx-info-value"><span class="tag" [ngClass]="selectedTx.typeClass">{{ selectedTx.type }}</span></span></div>
         <div class="tx-info-item"><span class="tx-info-label">Date &amp; Time</span><span class="tx-info-value">{{ selectedTx.date }}</span></div>

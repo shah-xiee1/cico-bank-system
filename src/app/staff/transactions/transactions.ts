@@ -16,6 +16,9 @@ export interface TxData {
   image: string;
   senderName: string;
   recipientName: string;
+  paymentSource?: string;
+  recipientBank?: string;
+  serviceFee?: number;
 }
 
 @Component({
@@ -75,8 +78,11 @@ export class Transactions implements OnInit {
             processedBy: tx.processedBy || '',
             timestamp: tx.timestamp || 0,
             image: sender ? sender.image : '/images/client.jpg',
-            senderName: sender ? sender.name : (tx.senderId || 'System'),
-            recipientName: tx.category === 'Service Fee' ? 'CICO Bank (Fee)' : (recipient ? recipient.name : (tx.title || 'N/A'))
+            senderName: sender ? `${sender.name} (${sender.accountNumber || sender.phone})` : (tx.senderId || 'System'),
+            recipientName: tx.category === 'Service Fee' ? 'CICO Bank (Fee)' : (recipient ? `${recipient.name} (${recipient.accountNumber || recipient.phone})` : (tx.title || 'N/A')),
+            paymentSource: tx.paymentSource || '',
+            recipientBank: tx.recipientBank || '',
+            serviceFee: tx.serviceFee !== undefined ? tx.serviceFee : undefined
           };
         });
 

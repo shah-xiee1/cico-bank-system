@@ -145,25 +145,40 @@ export class DatabaseService {
 
     if (newStatus === 'Approved') {
       const config = configSnap?.data() || {};
-      transferFeeAmount = parseFloat(config['transferFee']?.toString().replace(/,/g, '')) || 0;
+      
+      if (txData['serviceFee'] !== undefined) {
+        transferFeeAmount = parseFloat(txData['serviceFee']?.toString() || '0') || 0;
+      } else {
+        transferFeeAmount = parseFloat(config['transferFee']?.toString().replace(/,/g, '')) || 0;
+      }
 
       const amountStr: string = txData['amount'] || '0';
       numericAmount = parseFloat(amountStr.replace(/[^0-9.]/g, '')) || 0;
 
       if (isTransfer) {
-        if (senderId && senderSnap?.exists()) {
-          const currentBalance = senderSnap.data()?.['balance'] ?? 25000;
-          const totalDeduction = numericAmount + transferFeeAmount;
+        const paymentSource = txData['paymentSource'] || 'CICO Bank Balance';
+        if (paymentSource === 'CICO Bank Balance') {
+          if (senderId && senderSnap?.exists()) {
+            const currentBalance = senderSnap.data()?.['balance'] ?? 25000;
+            const totalDeduction = numericAmount + transferFeeAmount;
 
-          if (currentBalance < totalDeduction) {
-            throw new Error("Insufficient funds for transfer and fees.");
+            if (currentBalance < totalDeduction) {
+              throw new Error("Insufficient funds for transfer and fees.");
+            }
+            senderNewBalance = currentBalance - totalDeduction;
           }
-          senderNewBalance = currentBalance - totalDeduction;
+        } else {
+          senderNewBalance = null;
         }
 
-        if (recipientId && recipientSnap?.exists()) {
-          const currentRecBal = recipientSnap.data()?.['balance'] ?? 25000;
-          recipientNewBalance = currentRecBal + numericAmount;
+        const recipientBank = txData['recipientBank'] || 'CICO Bank';
+        if (recipientBank === 'CICO Bank') {
+          if (recipientId && recipientSnap?.exists()) {
+            const currentRecBal = recipientSnap.data()?.['balance'] ?? 25000;
+            recipientNewBalance = currentRecBal + numericAmount;
+          }
+        } else {
+          recipientNewBalance = null;
         }
       } else if (isDeposit) {
         if (senderId && senderSnap?.exists()) {
@@ -361,7 +376,19 @@ export class DatabaseService {
     const balanceDoc = doc(this.firestore, `clients/${clientId}`);
     const snap = await getDoc(balanceDoc);
     if (!snap.exists()) {
-      await setDoc(balanceDoc, { balance: 25000, name: clientId === 'excel_john' ? 'Excel John' : 'Elliara Liv', email: clientId === 'excel_john' ? 'client@cico.com' : 'client2@cico.com' });
+      await setDoc(balanceDoc, { 
+        balance: 25000, 
+        name: clientId === 'excel_john' ? 'Excel John' : 'Elliara Liv', 
+        email: clientId === 'excel_john' ? 'client@cico.com' : 'client2@cico.com',
+        accountNumber: clientId === 'excel_john' ? 'CICO-1001-0001' : 'CICO-1001-0002'
+      });
+    } else {
+      const data = snap.data();
+      if (!data['accountNumber']) {
+        await updateDoc(balanceDoc, {
+          accountNumber: clientId === 'excel_john' ? 'CICO-1001-0001' : 'CICO-1001-0002'
+        });
+      }
     }
   }
 
@@ -501,6 +528,7 @@ export class DatabaseService {
           name: c['name'] || c['email'] || 'Unknown Client',
           email: c['email'] || '',
           phone: c['phone'] || (c['email'] === 'client2@cico.com' ? '0918 987 6543' : '0917 123 4567'),
+          accountNumber: c['accountNumber'] || (c['id'] === 'excel_john' ? 'CICO-1001-0001' : 'CICO-1001-0002'),
           role: 'Client',
           status: c['status'] || 'Active',
           image: c['email'] === 'client2@cico.com' ? '/images/client2.jpg' : '/images/client.jpg'
@@ -580,9 +608,9 @@ export class DatabaseService {
     const adminSnap = await getDocs(collection(this.firestore, 'admin'));
     adminSnap.docs.forEach(d => batch.delete(d.ref));
 
-    // Reset client balances to 25000 and include phone numbers
-    batch.set(doc(this.firestore, 'clients/excel_john'), { balance: 25000, name: 'Excel John', email: 'client@cico.com', phone: '09171234567' });
-    batch.set(doc(this.firestore, 'clients/elliara_liv'), { balance: 25000, name: 'Elliara Liv', email: 'client2@cico.com', phone: '09189876543' });
+    // Reset client balances to 25000 and include phone numbers and CICO bank account numbers
+    batch.set(doc(this.firestore, 'clients/excel_john'), { balance: 25000, name: 'Excel John', email: 'client@cico.com', phone: '09171234567', accountNumber: 'CICO-1001-0001' });
+    batch.set(doc(this.firestore, 'clients/elliara_liv'), { balance: 25000, name: 'Elliara Liv', email: 'client2@cico.com', phone: '09189876543', accountNumber: 'CICO-1001-0002' });
 
     // Reset System Reserves
     batch.set(doc(this.firestore, 'system/config'), { total_reserves: 1200000 });

@@ -26,7 +26,7 @@ export class Reports implements OnInit {
   userImage: string = '/images/admin.jpg';
 
   // Stats derived from transactions
-  stats$!: Observable<{ total: number; pending: number; approved: number; rejected: number }>;
+  stats$!: Observable<{ total: number; approved: number; rejected: number; refunded: number }>;
 
   // Filter
   activeFilter: 'All' | 'Client' | 'Staff' = 'All';
@@ -45,9 +45,9 @@ export class Reports implements OnInit {
     this.stats$ = this.allTransactions$.pipe(
       map(txs => ({
         total:    txs.length,
-        pending:  txs.filter(t => t.status === 'Pending').length,
         approved: txs.filter(t => t.status === 'Approved').length,
-        rejected: txs.filter(t => t.status === 'Rejected').length
+        rejected: txs.filter(t => t.status === 'Rejected').length,
+        refunded: txs.filter(t => t.status === 'Refunded').length
       }))
     );
 
@@ -111,7 +111,7 @@ export class Reports implements OnInit {
 
   getStatusBadgeClass(status: string): string {
     if (status === 'Approved') return 'success';
-    if (status === 'Rejected') return 'rejected';
+    if (status === 'Refunded' || status === 'Rejected') return 'rejected';
     return 'pending';
   }
 }

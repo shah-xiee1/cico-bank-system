@@ -117,24 +117,24 @@
       <div class="analytics-grid">
         <div class="metric-item">
           <div class="metric-header">
-            <span class="metric-title">Staff Approval Throughput</span>
+            <span class="metric-title">Transaction Completion Rate</span>
             <span class="metric-value" [ngClass]="stats.completion > 70 ? 'success-text' : 'warning-text'">{{ stats.completion }}%</span>
           </div>
           <div class="progress-track">
             <div class="progress-fill" [ngClass]="stats.completion > 70 ? 'bg-success' : 'bg-warning'" [style.width.%]="stats.completion"></div>
           </div>
-          <p class="metric-desc">{{ stats.processed }} of {{ stats.total }} client requests processed</p>
+          <p class="metric-desc">{{ stats.processed }} of {{ stats.total }} transactions completed</p>
         </div>
 
         <div class="metric-item">
           <div class="metric-header">
-            <span class="metric-title">Client-Staff Queue Sync</span>
-            <span class="metric-value" [ngClass]="stats.health > 80 ? 'success-text' : 'warning-text'">{{ stats.health }}% Healthy</span>
+            <span class="metric-title">System Refund Activity</span>
+            <span class="metric-value" [ngClass]="stats.refundRate < 30 ? 'success-text' : 'warning-text'">{{ stats.refundRate }}% Refunded</span>
           </div>
           <div class="progress-track">
-            <div class="progress-fill" [ngClass]="stats.health > 80 ? 'bg-success' : 'bg-warning'" [style.width.%]="stats.health"></div>
+            <div class="progress-fill" [ngClass]="stats.refundRate < 30 ? 'bg-success' : 'bg-warning'" [style.width.%]="stats.refundRate"></div>
           </div>
-          <p class="metric-desc">{{ stats.pending }} requests currently awaiting staff action</p>
+          <p class="metric-desc">{{ stats.refunded }} transactions refunded by staff</p>
         </div>
 
         <div class="metric-item">
@@ -145,7 +145,7 @@
           <div class="progress-track">
             <div class="progress-fill bg-primary" [style.width.%]="stats.success"></div>
           </div>
-          <p class="metric-desc">Percentage of requests approved vs rejected</p>
+          <p class="metric-desc">Percentage of requests approved vs rejected/refunded</p>
         </div>
       </div>
     </div>

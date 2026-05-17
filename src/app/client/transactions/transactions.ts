@@ -37,7 +37,7 @@ export class ClientTransactionsComponent implements OnInit {
         // Filter for current user
         const userTxs = txs.filter((tx: any) => 
           tx.senderId === this.currentUserId || 
-          (tx.recipientId === this.currentUserId && tx.status === 'Approved')
+          (tx.recipientId === this.currentUserId && (tx.status === 'Approved' || tx.status === 'Refunded'))
         );
 
         return userTxs.map((tx: any) => {
@@ -59,12 +59,12 @@ export class ClientTransactionsComponent implements OnInit {
               displayAmount = displayAmount.replace('-', '+');
             }
             if (sender) {
-              displayTitle = `${sender.name} (${sender.phone})`;
+              displayTitle = `${sender.name} (${sender.accountNumber || sender.phone})`;
             } else {
               displayTitle = 'Incoming Transfer';
             }
           } else if (tx.senderId === this.currentUserId && recipient) {
-            displayTitle = `${recipient.name} (${recipient.phone})`;
+            displayTitle = `${recipient.name} (${recipient.accountNumber || recipient.phone})`;
           }
 
           return { ...tx, time: dateStr, amount: displayAmount, title: displayTitle };
@@ -101,7 +101,7 @@ export class ClientTransactionsComponent implements OnInit {
 
   getStatusClass(status: string) {
     if (status === 'Approved') return 'success';
-    if (status === 'Rejected') return 'rejected';
+    if (status === 'Refunded' || status === 'Rejected') return 'rejected';
     return 'pending';
   }
 }

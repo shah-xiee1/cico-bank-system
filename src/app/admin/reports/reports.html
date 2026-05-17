@@ -85,11 +85,14 @@
       </div>
       <div class="report-stat-card">
         <div class="rs-icon pending">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+            <path d="M3 2v6h6"></path>
+            <path d="M3 13a9 9 0 1 0 9-9 9.97 9.97 0 0 0-6.74 2.74L3 8"></path>
+          </svg>
         </div>
         <div class="rs-info">
-          <span class="rs-val warning">{{ stats.pending }}</span>
-          <span class="rs-label">Pending Review</span>
+          <span class="rs-val warning">{{ stats.refunded }}</span>
+          <span class="rs-label">Refunded</span>
         </div>
       </div>
       <div class="report-stat-card">

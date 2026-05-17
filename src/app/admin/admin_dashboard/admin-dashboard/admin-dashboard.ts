@@ -37,18 +37,18 @@ export class AdminDashboardComponent implements OnInit {
     this.systemAnalytics$ = this.dbService.getTransactions().pipe(
       map(txs => {
         const total = txs.length;
-        if (total === 0) return { completion: 0, health: 100, success: 0, pending: 0, processed: 0, total: 0 };
+        if (total === 0) return { completion: 0, refundRate: 0, success: 0, refunded: 0, processed: 0, total: 0 };
         
-        const pending = txs.filter(t => t.status === 'Pending').length;
         const approved = txs.filter(t => t.status === 'Approved').length;
         const rejected = txs.filter(t => t.status === 'Rejected').length;
-        const processed = approved + rejected;
+        const refunded = txs.filter(t => t.status === 'Refunded').length;
+        const processed = approved + rejected + refunded;
 
         return {
           completion: Math.round((processed / total) * 100),
-          health: Math.round(((total - pending) / total) * 100),
+          refundRate: Math.round((refunded / (processed || 1)) * 100),
           success: Math.round((approved / (processed || 1)) * 100),
-          pending,
+          refunded,
           processed,
           total
         };

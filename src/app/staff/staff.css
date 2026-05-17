@@ -200,6 +200,18 @@
   border: 1px solid #fed7aa;
 }
 
+.badge.approved {
+  background: #dcfce7;
+  color: #10b981;
+  border: 1px solid #bbf7d0;
+}
+
+.badge.rejected {
+  background: #fee2e2;
+  color: #ef4444;
+  border: 1px solid #fecaca;
+}
+
 .tx-data-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
