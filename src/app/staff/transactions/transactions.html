@@ -60,17 +60,18 @@
     <div class="staff-tx-content">
       <!-- Summary Row -->
       <div class="tx-summary-grid">
-        <div class="solid-card summary-card pending-card clickable" (click)="setFilter('Pending')" [class.active-card]="filterStatus === 'Pending'">
-          <p class="summary-label">Pending</p>
-          <p class="summary-value">{{ stats.pending }}</p>
+        <div class="solid-card summary-card pending-card clickable" (click)="setFilter('Refunded')" [class.active-card]="filterStatus === 'Refunded'">
+          <p class="summary-label">Refunded</p>
+          <p class="summary-value">{{ stats.refunded }}</p>
         </div>
         <div class="solid-card summary-card approved-card clickable" (click)="setFilter('Approved')" [class.active-card]="filterStatus === 'Approved'">
           <p class="summary-label">Approved Today</p>
           <p class="summary-value">{{ stats.approved }}</p>
         </div>
+        <!-- (We can leave Rejected empty or remove it if not needed, but keeping for backward compatibility of old data) -->
         <div class="solid-card summary-card rejected-card clickable" (click)="setFilter('Rejected')" [class.active-card]="filterStatus === 'Rejected'">
-          <p class="summary-label">Rejected Today</p>
-          <p class="summary-value">{{ stats.rejected }}</p>
+          <p class="summary-label">Rejected</p>
+          <p class="summary-value">0</p>
         </div>
         <div class="solid-card summary-card total-card clickable" (click)="setFilter('All')" [class.active-card]="filterStatus === 'All'">
           <p class="summary-label">Total Volume</p>
@@ -87,9 +88,8 @@
           </div>
           <div class="filter-chips-row">
             <button class="chip" [class.active]="filterStatus==='All'"      (click)="setFilter('All')">All</button>
-            <button class="chip" [class.active]="filterStatus==='Pending'"  (click)="setFilter('Pending')">Pending</button>
             <button class="chip" [class.active]="filterStatus==='Approved'" (click)="setFilter('Approved')">Approved</button>
-            <button class="chip" [class.active]="filterStatus==='Rejected'" (click)="setFilter('Rejected')">Rejected</button>
+            <button class="chip" [class.active]="filterStatus==='Refunded'" (click)="setFilter('Refunded')">Refunded</button>
           </div>
         </div>
 
@@ -118,9 +118,8 @@
                 <td class="tx-val" [ngClass]="tx.amountClass">{{ tx.amount }}</td>
                 <td><span class="status-badge" [ngClass]="tx.statusClass">{{ tx.status }}</span></td>
                 <td class="action-cell" (click)="$event.stopPropagation()">
-                  <ng-container *ngIf="tx.statusClass === 'pending'; else processed">
-                    <button class="btn-approve sm" (click)="approveTx(tx); $event.stopPropagation()">Approve</button>
-                    <button class="btn-reject sm" (click)="rejectTx(tx); $event.stopPropagation()">Reject</button>
+                  <ng-container *ngIf="tx.status === 'Approved'; else processed">
+                    <button class="btn-reject sm" (click)="refundTx(tx); $event.stopPropagation()">Refund</button>
                   </ng-container>
                   <ng-template #processed>
                     <span class="processed-by">By: {{ tx.processedBy }}</span>
@@ -161,9 +160,8 @@
         <div class="tx-info-item" *ngIf="selectedTx.processedBy"><span class="tx-info-label">Processed By</span><span class="tx-info-value">{{ selectedTx.processedBy }}</span></div>
       </div>
     </div>
-    <div class="tx-modal-footer" *ngIf="selectedTx.statusClass === 'pending'">
-      <button class="btn-approve modal-action-btn" (click)="approveTx(selectedTx)">Approve</button>
-      <button class="btn-reject modal-action-btn" (click)="rejectTx(selectedTx)">Reject</button>
+    <div class="tx-modal-footer" *ngIf="selectedTx.status === 'Approved'">
+      <button class="btn-reject modal-action-btn" (click)="refundTx(selectedTx)">Refund</button>
     </div>
   </div>
 </div>

@@ -421,3 +421,136 @@
   .wallet-content-inner { padding: 20px; }
   .balance-amount { font-size: 2.2rem; }
 }
+
+/* Simulated Email Toast Notification */
+.mock-email-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  width: 350px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+  padding: 16px;
+  z-index: 10000;
+  animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mock-email-toast:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.2);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(120%) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.toast-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.email-icon {
+  background: rgba(14, 165, 233, 0.1);
+  color: var(--primary);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sender-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  flex: 1;
+}
+
+.toast-time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.toast-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.toast-close:hover {
+  color: #ef4444;
+}
+
+.toast-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.email-subject {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.email-preview {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.otp-code-badge {
+  display: inline-block;
+  background: rgba(14, 165, 233, 0.1);
+  color: var(--primary);
+  font-family: monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px dashed rgba(14, 165, 233, 0.3);
+}
+
+.toast-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.btn-copy-otp {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px rgba(14, 165, 233, 0.2);
+}
+
+.btn-copy-otp:hover {
+  background: #0284c7;
+  transform: translateY(-1px);
+}

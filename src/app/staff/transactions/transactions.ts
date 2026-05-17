@@ -38,9 +38,8 @@ export class Transactions implements OnInit {
   userImage: string = '/images/staff.jpg';
 
   stats = {
-    pending: 0,
     approved: 0,
-    rejected: 0,
+    refunded: 0,
     totalVolume: '₱ 0'
   };
 
@@ -82,9 +81,8 @@ export class Transactions implements OnInit {
         });
 
         // Update stats
-        this.stats.pending = mapped.filter((t: any) => t.status === 'Pending').length;
         this.stats.approved = mapped.filter((t: any) => t.status === 'Approved').length;
-        this.stats.rejected = mapped.filter((t: any) => t.status === 'Rejected').length;
+        this.stats.refunded = mapped.filter((t: any) => t.status === 'Refunded').length;
         
         const total = mapped.reduce((acc: number, tx: any) => {
           const amt = parseFloat(tx.amount.replace(/[^0-9.]/g, '')) || 0;
@@ -107,7 +105,7 @@ export class Transactions implements OnInit {
 
   getStatusClass(status: string) {
     if (status === 'Approved') return 'approved';
-    if (status === 'Rejected') return 'rejected';
+    if (status === 'Refunded' || status === 'Rejected') return 'rejected';
     return 'pending';
   }
 
@@ -116,31 +114,18 @@ export class Transactions implements OnInit {
   openModal(tx: TxData) { this.selectedTx = tx; }
   closeModal() { this.selectedTx = null; }
 
-  async approveTx(tx: TxData) {
+  async refundTx(tx: TxData) {
     if (tx.id) {
-      // Close immediately for snappy UI
+      if (!confirm('Are you sure you want to refund this transaction?')) return;
       const wasSelected = this.selectedTx?.id === tx.id;
       if (wasSelected) this.closeModal();
       
       try {
-        await this.dbService.updateTransactionStatus(tx.id, 'Approved', this.userName);
+        await this.dbService.refundTransaction(tx.id, this.userName);
+        alert('Transaction refunded successfully.');
       } catch (err: any) {
         if (wasSelected) this.openModal(tx);
-        alert('Error approving transaction: ' + err.message);
-      }
-    }
-  }
-
-  async rejectTx(tx: TxData) {
-    if (tx.id) {
-      const wasSelected = this.selectedTx?.id === tx.id;
-      if (wasSelected) this.closeModal();
-      
-      try {
-        await this.dbService.updateTransactionStatus(tx.id, 'Rejected', this.userName);
-      } catch (err: any) {
-        if (wasSelected) this.openModal(tx);
-        alert('Error rejecting transaction: ' + err.message);
+        alert('Error refunding transaction: ' + err.message);
       }
     }
   }

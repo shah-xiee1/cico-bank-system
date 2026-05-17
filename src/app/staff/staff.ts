@@ -20,29 +20,29 @@ export class StaffComponent implements OnInit {
   userImage: string = '/images/staff.jpg';
   fullPhone$!: Observable<string>;
   
-  pendingTransactions$: Observable<any[]> = new Observable();
+  recentTransactions$: Observable<any[]> = new Observable();
   selectedTx: any = null;
   processingIds = new Set<string>();
   private localUpdate$ = new BehaviorSubject<void>(undefined);
   
   stats = {
-    pending: 0,
     processed: 0,
+    refunded: 0,
     totalVolume: '₱ 0'
   };
 
   ngOnInit() {
     this.userName = localStorage.getItem('currentUserName') || 'Cindy Ma. Lala';
     this.userImage = '/images/staff.jpg';
-    this.pendingTransactions$ = combineLatest([
+    this.recentTransactions$ = combineLatest([
       this.dbService.getTransactions(),
       this.dbService.getUsers(),
       this.localUpdate$
     ]).pipe(
       map(([txs, users]: [any[], any[], void]) => {
-        const pending = txs.filter((tx: any) => tx.status === 'Pending' && !this.processingIds.has(tx.id)).sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
-        this.stats.pending = pending.length;
-        this.stats.processed = txs.filter((tx: any) => tx.status !== 'Pending' || this.processingIds.has(tx.id)).length;
+        const sorted = [...txs].sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
+        this.stats.processed = sorted.length;
+        this.stats.refunded = txs.filter((tx: any) => tx.status === 'Refunded').length;
         
         const total = txs.reduce((acc: number, tx: any) => {
           const amt = parseFloat((tx.amount || '').replace(/[^0-9.]/g, '')) || 0;
@@ -50,7 +50,7 @@ export class StaffComponent implements OnInit {
         }, 0);
         this.stats.totalVolume = '₱ ' + total.toLocaleString();
         
-        const enriched = pending.map((tx: any) => {
+        const enriched = sorted.map((tx: any) => {
           const sender = users.find((u: any) => u.id === tx.senderId);
           const recipient = users.find((u: any) => u.id === tx.recipientId);
           
@@ -85,28 +85,10 @@ export class StaffComponent implements OnInit {
     this.selectedTx = tx;
   }
 
-  async approveTx() {
+  async refundTx() {
     if (this.selectedTx?.id) {
-      const txId = this.selectedTx.id;
-      const prevTx = this.selectedTx;
-      
-      this.processingIds.add(txId);
-      this.localUpdate$.next();
-      
-      try {
-        await this.dbService.updateTransactionStatus(txId, 'Approved', this.userName);
-        this.processingIds.delete(txId);
-      } catch (err: any) {
-        this.processingIds.delete(txId);
-        this.selectedTx = prevTx;
-        this.localUpdate$.next();
-        alert('Error approving transaction: ' + err.message);
-      }
-    }
-  }
+      if (!confirm('Are you sure you want to refund this transaction?')) return;
 
-  async rejectTx() {
-    if (this.selectedTx?.id) {
       const txId = this.selectedTx.id;
       const prevTx = this.selectedTx;
       
@@ -114,13 +96,14 @@ export class StaffComponent implements OnInit {
       this.localUpdate$.next();
       
       try {
-        await this.dbService.updateTransactionStatus(txId, 'Rejected', this.userName);
+        await this.dbService.refundTransaction(txId, this.userName);
         this.processingIds.delete(txId);
+        alert('Transaction refunded successfully.');
       } catch (err: any) {
         this.processingIds.delete(txId);
         this.selectedTx = prevTx;
         this.localUpdate$.next();
-        alert('Error rejecting transaction: ' + err.message);
+        alert('Error refunding transaction: ' + err.message);
       }
     }
   }

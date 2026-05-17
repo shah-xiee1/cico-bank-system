@@ -30,6 +30,13 @@ export class ClientComponent implements OnInit {
 
   otpInput: string = '';
   pendingTxDetails: any = null;
+  generatedOtp = '';
+  currentUserEmail = 'client@cico.com';
+  showMockEmailToast = false;
+  mockEmailSubject = '';
+  mockEmailBody = '';
+  mockEmailTime = '';
+  toastTimeoutId: any = null;
 
   recentActivity$!: Observable<any[]>;
   balance$!: Observable<number>;
@@ -112,6 +119,11 @@ export class ClientComponent implements OnInit {
       })
     );
     this.dbService.getSystemConfig().subscribe(config => this.systemConfig = config);
+    this.dbService.getClientBalance(this.currentUserId).subscribe((data: any) => {
+      if (data) {
+        this.currentUserEmail = data.email || (this.currentUserId === 'excel_john' ? 'client@cico.com' : 'client2@cico.com');
+      }
+    });
   }
 
   openModal(type: 'send' | 'deposit' | 'detail', tx?: any) {
@@ -132,6 +144,11 @@ export class ClientComponent implements OnInit {
     this.selectedTx = null;
     this.pendingTxDetails = null;
     this.otpInput = '';
+    this.showMockEmailToast = false;
+    if (this.toastTimeoutId) {
+      clearTimeout(this.toastTimeoutId);
+      this.toastTimeoutId = null;
+    }
   }
 
   formatAmount(event: any) {
@@ -172,11 +189,15 @@ export class ClientComponent implements OnInit {
     this.showDepositModal = false;
     this.showOtpModal = true;
     this.otpInput = '';
+
+    // Generate random 6-digit OTP and trigger simulated email toast
+    this.generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    this.triggerMockEmailToast();
   }
 
   async verifyOtpAndProcess() {
-    if (this.otpInput !== '123456') {
-      alert('Invalid OTP. Please try again.');
+    if (this.otpInput !== this.generatedOtp) {
+      alert('Invalid OTP. Please check your simulated email notification banner at the top-right.');
       return;
     }
 
@@ -186,7 +207,7 @@ export class ClientComponent implements OnInit {
 
     // Optimistic Update: Close modal immediately
     this.closeModals();
-    alert(`${type} transaction submitted and pending approval.`);
+    alert(`${type} transaction submitted and processed.`);
     this.router.navigate(['/client/transactions']);
 
     let targetRecipientId: string | null = null;
@@ -219,6 +240,60 @@ export class ClientComponent implements OnInit {
       timestamp: new Date().getTime()
     };
 
-    await this.dbService.addTransaction(txData);
+    const txRef = await this.dbService.addTransaction(txData);
+    try {
+      await this.dbService.updateTransactionStatus(txRef.id, 'Approved', 'System (Auto)');
+    } catch (err: any) {
+      await this.dbService.updateTransactionStatus(txRef.id, 'Rejected', 'System (Auto)');
+      console.error('Auto-approval failed:', err);
+      alert('Transaction failed to process automatically: ' + err.message);
+    }
+  }
+
+  triggerMockEmailToast() {
+    this.showMockEmailToast = false;
+    if (this.toastTimeoutId) {
+      clearTimeout(this.toastTimeoutId);
+    }
+
+    setTimeout(() => {
+      this.showMockEmailToast = true;
+      this.mockEmailSubject = 'CICO Security: One-Time Password';
+      this.mockEmailBody = `Your CICO authorization code is: ${this.generatedOtp}. Do not share this code with anyone.`;
+      this.mockEmailTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      this.toastTimeoutId = setTimeout(() => {
+        this.showMockEmailToast = false;
+      }, 12000);
+    }, 1200);
+  }
+
+  resendOtp() {
+    this.generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    this.otpInput = '';
+    this.triggerMockEmailToast();
+    alert('A new dynamic OTP has been simulated and sent to your email.');
+  }
+
+  maskEmail(email: string): string {
+    if (!email) return '';
+    const parts = email.split('@');
+    if (parts.length !== 2) return email;
+    const name = parts[0];
+    const domain = parts[1];
+    if (name.length <= 2) {
+      return name + '***@' + domain;
+    }
+    return name.substring(0, 2) + '***@' + domain;
+  }
+
+  copyOtpToClipboard() {
+    if (this.generatedOtp) {
+      navigator.clipboard.writeText(this.generatedOtp).then(() => {
+        alert('OTP code ' + this.generatedOtp + ' copied to clipboard!');
+      }).catch(err => {
+        console.error('Failed to copy text: ', err);
+      });
+    }
   }
 }

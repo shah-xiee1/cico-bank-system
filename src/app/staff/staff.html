@@ -56,7 +56,7 @@
         <h1>Banking Operations</h1>
       </div>
       <div class="header-actions">
-        <div class="stat-pill clickable" routerLink="/transactions" title="View all pendings"><span class="label">Pending:</span> <span class="val warning">{{ stats.pending }}</span></div>
+        <div class="stat-pill"><span class="label">Refunded:</span> <span class="val warning">{{ stats.refunded }}</span></div>
         <div class="stat-pill"><span class="label">Processed:</span> <span class="val success">{{ stats.processed }}</span></div>
         <div class="stat-pill"><span class="label">Volume:</span> <span class="val">{{ stats.totalVolume }}</span></div>
       </div>
@@ -66,11 +66,11 @@
       <!-- Left Pane: Queue -->
       <div class="pane queue-pane">
         <div class="pane-header">
-          <h3>Pending Queue</h3>
+          <h3>Recent Transactions</h3>
           <button class="text-btn" routerLink="/transactions">Filter</button>
         </div>
         <div class="queue-list">
-          <div *ngFor="let tx of pendingTransactions$ | async; let i = index" 
+          <div *ngFor="let tx of recentTransactions$ | async; let i = index" 
                class="queue-item" 
                [class.active]="selectedTx?.id === tx.id"
                (click)="selectTx(tx)">
@@ -84,8 +84,8 @@
             </div>
             <div class="q-amount" [class.positive]="tx.category === 'Deposit'">{{ tx.amount }}</div>
           </div>
-          <div *ngIf="stats.pending === 0" class="empty-queue">
-            <p>No pending transactions</p>
+          <div *ngIf="stats.processed === 0" class="empty-queue">
+            <p>No recent transactions</p>
           </div>
         </div>
       </div>
@@ -95,7 +95,7 @@
         <div class="details-card" *ngIf="selectedTx; else noSelection">
           <div class="tx-header">
             <h2>{{ selectedTx.category || 'Transaction' }}</h2>
-            <span class="badge pending">{{ selectedTx.status }} Review</span>
+            <span class="badge" [class.pending]="selectedTx.status==='Pending'">{{ selectedTx.status }}</span>
           </div>
           
           <div class="tx-data-grid">
@@ -121,13 +121,12 @@
             </div>
             <div class="data-group full-width">
               <label>System Flags</label>
-              <div class="flag-box"><span class="icon">⚠️</span> Verification required for manual processing.</div>
+              <div class="flag-box"><span class="icon">ℹ️</span> System processed automatically.</div>
             </div>
           </div>
 
-          <div class="action-buttons-large">
-            <button class="btn-large reject" (click)="rejectTx()">Reject Transaction</button>
-            <button class="btn-large approve" (click)="approveTx()">Approve & Process</button>
+          <div class="action-buttons-large" *ngIf="selectedTx.status === 'Approved'">
+            <button class="btn-large reject" (click)="refundTx()">Refund Transaction</button>
           </div>
         </div>
         <ng-template #noSelection>

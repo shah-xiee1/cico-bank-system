@@ -242,6 +242,115 @@ export class DatabaseService {
     await batch.commit();
   }
 
+  async refundTransaction(id: string, processedBy: string = '') {
+    // --- 1. ALL READS ---
+    const txDocRef = doc(this.firestore, `transactions/${id}`);
+    const txSnap = await getDoc(txDocRef);
+    if (!txSnap.exists()) throw new Error("Transaction does not exist!");
+
+    const txData = txSnap.data();
+    if (txData['status'] !== 'Approved') {
+      throw new Error(`Only Approved transactions can be refunded.`);
+    }
+
+    const senderId = txData['senderId'];
+    const recipientId = txData['recipientId'];
+    const isTransfer = txData['category'] === 'Transfer';
+    const isDeposit = txData['category'] === 'Deposit';
+    const amountStr: string = txData['amount'] || '0';
+    const numericAmount = parseFloat(amountStr.replace(/[^0-9.]/g, '')) || 0;
+
+    let senderSnap: any = null;
+    let recipientSnap: any = null;
+
+    if (senderId) {
+      senderSnap = await getDoc(doc(this.firestore, `clients/${senderId}`));
+    }
+    if (recipientId && isTransfer) {
+      recipientSnap = await getDoc(doc(this.firestore, `clients/${recipientId}`));
+    }
+
+    // --- 2. LOGIC ---
+    let senderNewBalance: number | null = null;
+    let recipientNewBalance: number | null = null;
+
+    if (isTransfer) {
+      if (recipientId && recipientSnap?.exists()) {
+        const currentRecBal = recipientSnap.data()?.['balance'] ?? 25000;
+        if (currentRecBal < numericAmount) {
+          throw new Error("Recipient has insufficient funds for a refund.");
+        }
+        recipientNewBalance = currentRecBal - numericAmount;
+      }
+      if (senderId && senderSnap?.exists()) {
+        const currentSenderBal = senderSnap.data()?.['balance'] ?? 25000;
+        // The system keeps the fee, so we only refund the numeric amount
+        senderNewBalance = currentSenderBal + numericAmount;
+      }
+    } else if (isDeposit) {
+      if (senderId && senderSnap?.exists()) {
+        const currentBal = senderSnap.data()?.['balance'] ?? 25000;
+        if (currentBal < numericAmount) {
+          throw new Error("Client has insufficient funds to reverse the deposit.");
+        }
+        senderNewBalance = currentBal - numericAmount;
+      }
+    }
+
+    const currentTime = new Date().getTime();
+    const currentDateString = new Date().toLocaleString();
+
+    const notifData = {
+      source: 'Staff',
+      type: 'Refund',
+      description: `${processedBy || 'Staff'} refunded transaction ID: ${id}`,
+      reference: id,
+      status: 'Refunded',
+      timestamp: currentTime,
+      date: currentDateString
+    };
+
+    // --- 3. WRITES ---
+    const batch = writeBatch(this.firestore);
+
+    batch.update(txDocRef, { 
+      status: 'Refunded', 
+      processedAt: currentTime,
+      processedTime: currentDateString,
+      processedBy: processedBy || 'Staff'
+    });
+
+    const notifCollection = collection(this.firestore, 'notifications');
+    batch.set(doc(notifCollection), notifData);
+
+    if (senderNewBalance !== null && senderId) {
+      batch.update(doc(this.firestore, `clients/${senderId}`), { balance: senderNewBalance });
+    }
+    if (recipientNewBalance !== null && recipientId) {
+      batch.update(doc(this.firestore, `clients/${recipientId}`), { balance: recipientNewBalance });
+    }
+
+    if (isTransfer && !recipientId) {
+      const historyCol = collection(this.firestore, 'system_funds_history');
+      batch.set(doc(historyCol), {
+        type: 'Refund (Reverse Debit)',
+        amount: numericAmount,
+        timestamp: currentTime,
+        date: currentDateString
+      });
+    } else if (isDeposit) {
+      const historyCol = collection(this.firestore, 'system_funds_history');
+      batch.set(doc(historyCol), {
+        type: 'Refund (Reverse Credit)',
+        amount: numericAmount,
+        timestamp: currentTime,
+        date: currentDateString
+      });
+    }
+
+    await batch.commit();
+  }
+
   // --- CLIENT BALANCE ---
   getClientBalance(clientId: string = 'excel_john'): Observable<any> {
     const balanceDoc = doc(this.firestore, `clients/${clientId}`);

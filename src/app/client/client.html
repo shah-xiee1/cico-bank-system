@@ -224,15 +224,60 @@
       </div>
       <div class="modal-body">
         <p class="modal-desc" style="margin-bottom: 15px; color: var(--text-muted); font-size: 0.9rem;">
-          Please enter the 6-digit OTP sent to your registered email/phone to authorize this transaction.
+          Please enter the 6-digit OTP sent to your registered email to authorize this transaction.
         </p>
+        
+        <!-- Masked Email Indicator -->
+        <p style="font-size: 0.85rem; color: var(--text-main); margin-bottom: 15px; background: #f8fafc; padding: 12px 14px; border-radius: 8px; border-left: 3px solid var(--primary); display: flex; align-items: center; gap: 8px;">
+          <span>📧</span>
+          <span>Sending verification code to: <strong style="font-family: monospace;">{{ maskEmail(currentUserEmail) }}</strong></span>
+        </p>
+
         <div class="input-group">
           <label>One-Time Password</label>
           <input type="text" [(ngModel)]="otpInput" placeholder="------" maxlength="6" style="letter-spacing: 8px; font-size: 1.5rem; text-align: center; font-weight: bold;">
         </div>
+
+        <!-- Resend OTP Action Row -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.82rem;">
+          <span style="color: var(--text-muted);">Didn't receive the email?</span>
+          <button type="button" (click)="resendOtp()" style="background: none; border: none; color: var(--primary); font-weight: 600; cursor: pointer; padding: 0; transition: color 0.2s;">Resend OTP</button>
+        </div>
+
         <button class="btn-primary" (click)="verifyOtpAndProcess()">Verify & Proceed</button>
       </div>
     </div>
 
+  </div>
+
+  <!-- Simulated Email Toast Notification -->
+  <div class="mock-email-toast" *ngIf="showMockEmailToast" (click)="showMockEmailToast = false">
+    <div class="toast-header">
+      <div class="email-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+          <polyline points="22,6 12,13 2,6"></polyline>
+        </svg>
+      </div>
+      <span class="sender-name">CICO Security Services</span>
+      <span class="toast-time">{{ mockEmailTime }}</span>
+      <button class="toast-close" (click)="$event.stopPropagation(); showMockEmailToast = false">✕</button>
+    </div>
+    <div class="toast-body">
+      <h4 class="email-subject">{{ mockEmailSubject }}</h4>
+      <p class="email-preview">
+        To: <strong style="color: var(--text-main);">{{ currentUserEmail }}</strong><br>
+        Your authorization code is <span class="otp-code-badge">{{ generatedOtp }}</span>.
+      </p>
+      <div class="toast-actions">
+        <button class="btn-copy-otp" (click)="$event.stopPropagation(); copyOtpToClipboard()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" style="margin-right: 4px;">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          Copy Code
+        </button>
+      </div>
+    </div>
   </div>
 </div>
