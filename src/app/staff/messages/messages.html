@@ -10,7 +10,7 @@
       <img [src]="staffImage" class="avatar-sm" [alt]="staffName">
       <div class="info">
         <p class="name">{{ staffName }}</p>
-        <p class="role">Banking Associate II</p>
+        <p class="role">{{ staffAccountNumber$ | async }}</p>
       </div>
     </div>
 

@@ -10,7 +10,7 @@
       <img [src]="userImage" class="avatar-sm" [alt]="userName">
       <div class="info">
         <p class="name">{{ userName }}</p>
-        <p class="role">Banking Associate II</p>
+        <p class="role">{{ staffAccountNumber$ | async }}</p>
       </div>
     </div>
 
@@ -101,7 +101,7 @@
                 <th>Sender / Initiator</th>
                 <th>Transfer To / Recipient</th>
                 <th>Type</th>
-                <th>Amount</th>
+                <th class="text-right">Amount</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>
@@ -110,12 +110,12 @@
               <tr *ngFor="let tx of getFiltered(allTxs); let i = index" class="tx-row" (click)="openModal(tx)">
                 <td class="ts">
                   <span *ngIf="i === 0" class="badge" style="font-size:0.6rem; padding: 2px 6px; margin-right: 5px; background: var(--primary); color: white;">Latest</span>
-                  {{ tx.date }}
+                  {{ tx.timestamp | date:'MMM d, y, h:mm a' }}
                 </td>
                 <td><strong>{{ tx.senderName }}</strong></td>
                 <td><strong>{{ tx.recipientName }}</strong></td>
                 <td><span class="tag" [ngClass]="tx.typeClass">{{ tx.type }}</span></td>
-                <td class="tx-val" [ngClass]="tx.amountClass">{{ tx.amount }}</td>
+                <td class="tx-val text-right nowrap" [ngClass]="tx.amountClass">{{ tx.amount }}</td>
                 <td><span class="status-badge" [ngClass]="tx.statusClass">{{ tx.status }}</span></td>
                 <td class="action-cell" (click)="$event.stopPropagation()">
                   <ng-container *ngIf="tx.status === 'Approved'; else processed">
@@ -159,7 +159,7 @@
         <div class="tx-info-item" *ngIf="selectedTx.serviceFee !== undefined"><span class="tx-info-label">Service Fee</span><span class="tx-info-value">₱ {{ selectedTx.serviceFee | number:'1.2-2' }}</span></div>
         <div class="tx-info-item"><span class="tx-info-label">Reference</span><span class="tx-info-value">{{ selectedTx.desc }}</span></div>
         <div class="tx-info-item"><span class="tx-info-label">Type</span><span class="tx-info-value"><span class="tag" [ngClass]="selectedTx.typeClass">{{ selectedTx.type }}</span></span></div>
-        <div class="tx-info-item"><span class="tx-info-label">Date &amp; Time</span><span class="tx-info-value">{{ selectedTx.date }}</span></div>
+        <div class="tx-info-item"><span class="tx-info-label">Date &amp; Time</span><span class="tx-info-value">{{ selectedTx.timestamp | date:'MMM d, y, h:mm a' }}</span></div>
         <div class="tx-info-item" *ngIf="selectedTx.processedBy"><span class="tx-info-label">Processed By</span><span class="tx-info-value">{{ selectedTx.processedBy }}</span></div>
       </div>
     </div>

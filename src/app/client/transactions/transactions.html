@@ -10,7 +10,7 @@
       <img [src]="currentUserImage" class="avatar-sm" [alt]="currentUserName">
       <div class="info">
         <p class="name">{{ currentUserName }}</p>
-        <p class="role">{{ fullPhone$ | async }}</p>
+        <p class="role">{{ currentUserAccountNumber$ | async }}</p>
       </div>
     </div>
 
@@ -78,7 +78,7 @@
               <th>Description</th>
               <th>Category</th>
               <th>Status</th>
-              <th>Amount</th>
+              <th class="text-right">Amount</th>
             </tr>
           </thead>
           <tbody *ngIf="transactions$ | async as txs">
@@ -91,9 +91,9 @@
                 {{ tx.title }}
                 <p class="ref-sub" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 400; margin-top: 4px;">{{ tx.reference }}</p>
               </td>
-              <td>{{ tx.category || 'Transfer' }}</td>
+              <td>{{ tx.displayType || tx.category || 'Transfer' }}</td>
               <td><span class="badge" [ngClass]="getStatusClass(tx.status)">{{ tx.status }}</span></td>
-              <td class="amount-cell" [ngClass]="(tx.amount || '').includes('+') ? 'positive' : 'negative'">{{ tx.amount }}</td>
+              <td class="amount-cell text-right nowrap" [ngClass]="(tx.amount || '').includes('+') ? 'positive' : 'negative'">{{ tx.amount }}</td>
             </tr>
             <tr *ngIf="getFiltered(txs).length === 0">
               <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">No transactions found.</td>

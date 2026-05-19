@@ -18,7 +18,7 @@ export class StaffComponent implements OnInit {
   currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   userName: string = 'Staff';
   userImage: string = '/images/staff.jpg';
-  fullPhone$!: Observable<string>;
+  staffAccountNumber$!: Observable<string>;
   
   recentTransactions$: Observable<any[]> = new Observable();
   selectedTx: any = null;
@@ -40,7 +40,10 @@ export class StaffComponent implements OnInit {
       this.localUpdate$
     ]).pipe(
       map(([txs, users]: [any[], any[], void]) => {
-        const sorted = [...txs].sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
+        const sorted = [...txs].sort((a: any, b: any) => {
+          const getMs = (t: any) => typeof t === 'number' ? t : (t?.toMillis ? t.toMillis() : (t?.toDate ? t.toDate().getTime() : new Date(t || 0).getTime()));
+          return getMs(b.timestamp) - getMs(a.timestamp);
+        });
         this.stats.processed = sorted.length;
         this.stats.refunded = txs.filter((tx: any) => tx.status === 'Refunded').length;
         
@@ -73,10 +76,10 @@ export class StaffComponent implements OnInit {
         return enriched;
       })
     );
-    this.fullPhone$ = this.dbService.getUsers().pipe(
+    this.staffAccountNumber$ = this.dbService.getUsers().pipe(
       map((users: any[]) => {
         const me = users.find((u: any) => u.name === this.userName);
-        return me?.phone || '0900 000 0000';
+        return me?.accountNumber || 'CICO-2001-0001';
       })
     );
   }

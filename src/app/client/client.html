@@ -94,6 +94,12 @@
           <div class="circle receive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></div>
           <span>Deposit</span>
         </button>
+        <button class="action-circle-btn" (click)="openModal('qr')">
+          <div class="circle" style="background: rgba(168, 85, 247, 0.15); color: #a855f7;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          </div>
+          <span>My QR</span>
+        </button>
         <button class="action-circle-btn" routerLink="/client/transactions">
           <div class="circle history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
           <span>History</span>
@@ -129,8 +135,25 @@
   </main>
 
   <!-- MODALS -->
-  <div class="modal-overlay" *ngIf="showSendModal || showDepositModal || showDetailModal || showOtpModal" (click)="closeModals()">
+  <div class="modal-overlay" *ngIf="showSendModal || showDepositModal || showDetailModal || showOtpModal || showQrModal" (click)="closeModals()">
     
+    <!-- QR Code Modal -->
+    <div class="wallet-modal" *ngIf="showQrModal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>My QR Code</h3>
+        <button class="close-btn" (click)="closeModals()">✕</button>
+      </div>
+      <div class="modal-body" style="text-align: center;">
+        <p style="margin-bottom: 20px; color: var(--text-muted); font-size: 0.9rem;">Show this QR code to receive money instantly via CICO Bank.</p>
+        <div class="qr-container" style="background: white; padding: 20px; border-radius: 12px; display: inline-block; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+          <img [src]="qrCodeDataUrl" alt="QR Code" *ngIf="qrCodeDataUrl" style="width: 200px; height: 200px;">
+          <div *ngIf="!qrCodeDataUrl" style="width: 200px; height: 200px; display: flex; align-items: center; justify-content: center; background: #f8fafc; color: #94a3b8;">Generating QR...</div>
+        </div>
+        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 5px; color: var(--text-main);">{{ currentUserName }}</div>
+        <div style="font-family: monospace; font-size: 1.2rem; color: var(--primary); letter-spacing: 2px;">{{ currentUserAccountNumber$ | async }}</div>
+      </div>
+    </div>
+
     <!-- Transaction Detail Modal -->
     <div class="wallet-modal" *ngIf="showDetailModal" (click)="$event.stopPropagation()">
       <div class="modal-header">

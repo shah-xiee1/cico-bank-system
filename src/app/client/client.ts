@@ -5,6 +5,7 @@ import { DatabaseService } from '../services/database.service';
 import { Observable, firstValueFrom, combineLatest } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
+import * as QRCode from 'qrcode';
 
 @Component({
   selector: 'app-client',
@@ -26,7 +27,9 @@ export class ClientComponent implements OnInit {
   showDepositModal = false;
   showDetailModal = false;
   showOtpModal = false;
+  showQrModal = false;
   selectedTx: any = null;
+  qrCodeDataUrl: string = '';
 
   paymentSource = 'CICO Bank Balance';
   recipientBank = 'CICO Bank';
@@ -84,19 +87,22 @@ export class ClientComponent implements OnInit {
               displayColor = 'bg-green';
             }
             if (sender) {
-              displayTitle = `${sender.name} (${sender.phone})`;
+              displayTitle = sender.name;
             } else {
               displayTitle = 'Incoming Transfer';
             }
           } else if (tx.senderId === this.currentUserId && recipient) {
-            // For sender, if it was a client-to-client transfer, show recipient name+phone
-            displayTitle = `${recipient.name} (${recipient.phone})`;
+            // For sender, if it was a client-to-client transfer, show recipient name
+            displayTitle = recipient.name;
           }
 
           return { ...tx, amount: displayAmount, color: displayColor, title: displayTitle };
         });
       }),
-      map((txs: any[]) => txs.sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0)))
+      map((txs: any[]) => txs.sort((a: any, b: any) => {
+        const getMs = (t: any) => typeof t === 'number' ? t : (t?.toMillis ? t.toMillis() : (t?.toDate ? t.toDate().getTime() : new Date(t || 0).getTime()));
+        return getMs(b.timestamp) - getMs(a.timestamp);
+      }))
     );
     this.balance$ = this.dbService.getClientBalance(this.currentUserId).pipe(
       map((data: any) => {
@@ -140,14 +146,35 @@ export class ClientComponent implements OnInit {
     });
   }
 
-  openModal(type: 'send' | 'deposit' | 'detail', tx?: any) {
+  openModal(type: 'send' | 'deposit' | 'detail' | 'qr', tx?: any) {
     if (type === 'send') this.showSendModal = true;
     if (type === 'deposit') this.showDepositModal = true;
+    if (type === 'qr') {
+      this.showQrModal = true;
+      this.generateQrCode();
+    }
     if (type === 'detail') {
       this.selectedTx = tx;
       this.showDetailModal = true;
     }
     this.otpInput = '';
+  }
+
+  async generateQrCode() {
+    try {
+      const accNum = await firstValueFrom(this.currentUserAccountNumber$);
+      const dataToEncode = `CICO:${accNum}`;
+      this.qrCodeDataUrl = await QRCode.toDataURL(dataToEncode, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#0f172a',
+          light: '#ffffff'
+        }
+      });
+    } catch (err) {
+      console.error('Error generating QR code', err);
+    }
   }
 
   updateServiceFee() {
@@ -198,6 +225,7 @@ export class ClientComponent implements OnInit {
     this.showDepositModal = false;
     this.showDetailModal = false;
     this.showOtpModal = false;
+    this.showQrModal = false;
     this.selectedTx = null;
     this.pendingTxDetails = null;
     this.otpInput = '';

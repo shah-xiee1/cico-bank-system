@@ -39,6 +39,7 @@ export class Transactions implements OnInit {
   
   userName: string = 'Staff';
   userImage: string = '/images/staff.jpg';
+  staffAccountNumber$!: Observable<string>;
 
   stats = {
     approved: 0,
@@ -49,6 +50,12 @@ export class Transactions implements OnInit {
   ngOnInit() {
     this.userName = localStorage.getItem('currentUserName') || 'Cindy Ma. Lala';
     this.userImage = '/images/staff.jpg';
+    this.staffAccountNumber$ = this.dbService.getUsers().pipe(
+      map((users: any[]) => {
+        const me = users.find((u: any) => u.name === this.userName);
+        return me?.accountNumber || 'CICO-2001-0001';
+      })
+    );
     this.allTransactions$ = combineLatest([
       this.dbService.getTransactions(),
       this.dbService.getUsers()
@@ -69,7 +76,15 @@ export class Transactions implements OnInit {
             date: dateStr,
             client: tx.title || 'Unknown Client',
             desc: tx.reference || 'Transaction',
-            type: tx.category || 'Transfer',
+            type: (() => {
+              let t = tx.category || 'Transfer';
+              if (t === 'Transfer') return tx.recipientBank || 'CICO Bank';
+              if (t === 'Deposit' && tx.title) {
+                const method = tx.title.split(' ')[0];
+                if (['GCash', 'Maya', 'LandBank', 'UnionBank'].includes(method)) return method;
+              }
+              return t;
+            })(),
             typeClass: this.getTypeClass(tx.category || ''),
             amount: tx.amount || '0',
             amountClass: String(tx.amount || '').includes('-') ? 'negative' : 'positive',
@@ -78,8 +93,8 @@ export class Transactions implements OnInit {
             processedBy: tx.processedBy || '',
             timestamp: tx.timestamp || 0,
             image: sender ? sender.image : '/images/client.jpg',
-            senderName: sender ? `${sender.name} (${sender.accountNumber || sender.phone})` : (tx.senderId || 'System'),
-            recipientName: tx.category === 'Service Fee' ? 'CICO Bank (Fee)' : (recipient ? `${recipient.name} (${recipient.accountNumber || recipient.phone})` : (tx.title || 'N/A')),
+            senderName: sender ? sender.name : (tx.senderId || 'System'),
+            recipientName: tx.category === 'Service Fee' ? 'CICO Bank (Fee)' : (recipient ? recipient.name : (tx.title || 'N/A')),
             paymentSource: tx.paymentSource || '',
             recipientBank: tx.recipientBank || '',
             serviceFee: tx.serviceFee !== undefined ? tx.serviceFee : undefined
@@ -96,7 +111,10 @@ export class Transactions implements OnInit {
         }, 0);
         this.stats.totalVolume = '₱ ' + total.toLocaleString();
 
-        return mapped.sort((a: any, b: any) => b.timestamp - a.timestamp);
+        return mapped.sort((a: any, b: any) => {
+          const getMs = (t: any) => typeof t === 'number' ? t : (t?.toMillis ? t.toMillis() : (t?.toDate ? t.toDate().getTime() : new Date(t || 0).getTime()));
+          return getMs(b.timestamp) - getMs(a.timestamp);
+        });
       })
     );
   }

@@ -24,9 +24,16 @@ export class StaffMessagesComponent implements OnInit {
 
   staffName = 'Staff';
   staffImage = '/images/staff.jpg';
+  staffAccountNumber$!: Observable<string>;
 
   ngOnInit() {
     this.staffName = localStorage.getItem('currentUserName') || 'Cindy Ma. Lala';
+    this.staffAccountNumber$ = this.dbService.getUsers().pipe(
+      map((users: any[]) => {
+        const me = users.find((u: any) => u.name === this.staffName);
+        return me?.accountNumber || 'CICO-2001-0001';
+      })
+    );
 
     this.sessions$ = combineLatest([
       this.dbService.getAllMessages(),
@@ -79,8 +86,13 @@ export class StaffMessagesComponent implements OnInit {
             this.activeMessages = current.messages;
             this.selectedClientName = current.clientName;
             this.selectedClientImage = current.clientImage;
+          } else {
+            this.selectedClientId = null;
+            this.activeMessages = [];
           }
-        } else if (sessions.length > 0) {
+        }
+        
+        if (!this.selectedClientId && sessions.length > 0) {
           this.selectClient(sessions[0]);
         }
         

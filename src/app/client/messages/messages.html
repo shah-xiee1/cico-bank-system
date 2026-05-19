@@ -10,7 +10,7 @@
       <img [src]="currentUserImage" class="avatar-sm" [alt]="currentUserName">
       <div class="info">
         <p class="name">{{ currentUserName }}</p>
-        <p class="role">{{ fullPhone$ | async }}</p>
+        <p class="role">{{ currentUserAccountNumber$ | async }}</p>
       </div>
     </div>
 

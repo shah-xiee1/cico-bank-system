@@ -134,3 +134,6 @@
 
 .amount-cell.negative { color: var(--text-main); }
 .amount-cell.positive { color: #10b981; }
+
+.text-right { text-align: right !important; }
+.nowrap { white-space: nowrap !important; }

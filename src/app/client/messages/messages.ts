@@ -21,7 +21,7 @@ export class ClientMessagesComponent implements OnInit, OnDestroy {
   currentUserId: string = 'excel_john';
   currentUserName: string = 'Excel John';
   currentUserImage: string = '/images/client.jpg';
-  fullPhone$!: Observable<string>;
+  currentUserAccountNumber$!: Observable<string>;
   
   newMessageText: string = '';
 
@@ -49,10 +49,10 @@ export class ClientMessagesComponent implements OnInit, OnDestroy {
 
     this.sub.add(this.messages$.subscribe());
 
-    this.fullPhone$ = this.dbService.getUsers().pipe(
+    this.currentUserAccountNumber$ = this.dbService.getUsers().pipe(
       map((users: any[]) => {
         const me = users.find((u: any) => u.id === this.currentUserId);
-        return me?.phone || '0900 000 0000';
+        return me?.accountNumber || 'CICO-XXXX-XXXX';
       })
     );
   }

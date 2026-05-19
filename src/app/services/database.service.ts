@@ -33,7 +33,7 @@ export class DatabaseService {
       const msgSnap = await getDocs(collection(this.firestore, 'messages'));
       msgSnap.docs.forEach(d => {
         const str = JSON.stringify(d.data()).toLowerCase();
-        if (str.includes('jane doe') || str.includes('jane_doe') || d.id === 'jane_doe' || str.includes('cindy ma. lala')) deleteDoc(d.ref);
+        if (str.includes('jane doe') || str.includes('jane_doe') || d.id === 'jane_doe') deleteDoc(d.ref);
       });
       const clientsSnap = await getDocs(collection(this.firestore, 'clients'));
       clientsSnap.docs.forEach(d => {
@@ -538,6 +538,7 @@ export class DatabaseService {
           name: s['name'] || s['email'] || 'Unknown Staff',
           email: s['email'] || '',
           phone: s['phone'] || '0920 123 4567',
+          accountNumber: s['accountNumber'] || 'CICO-2001-0001',
           role: 'Staff',
           status: s['status'] || 'Active',
           image: '/images/staff.jpg'
@@ -547,6 +548,7 @@ export class DatabaseService {
           name: a['name'] || a['email'] || 'Unknown Admin',
           email: a['email'] || '',
           phone: a['phone'] || '0999 888 7777',
+          accountNumber: a['accountNumber'] || 'CICO-3001-0001',
           role: 'Admin',
           status: a['status'] || 'Active',
           image: '/images/admin.jpg'
@@ -616,8 +618,8 @@ export class DatabaseService {
     batch.set(doc(this.firestore, 'system/config'), { total_reserves: 1200000 });
 
     // Ensure staff and admin exist
-    batch.set(doc(this.firestore, 'staff/staff_1'), { name: 'Cindy Ma. Lala', email: 'staff@cico.com', role: 'Staff', status: 'Active', phone: '0920 123 4567' });
-    batch.set(doc(this.firestore, 'admin/admin_1'), { name: 'Hawk M. Beat', email: 'admin@cico.com', role: 'Admin', status: 'Active', phone: '0999 888 7777' });
+    batch.set(doc(this.firestore, 'staff/staff_1'), { name: 'Cindy Ma. Lala', email: 'staff@cico.com', role: 'Staff', status: 'Active', phone: '0920 123 4567', accountNumber: 'CICO-2001-0001' });
+    batch.set(doc(this.firestore, 'admin/admin_1'), { name: 'Hawk M. Beat', email: 'admin@cico.com', role: 'Admin', status: 'Active', phone: '0999 888 7777', accountNumber: 'CICO-3001-0001' });
 
     await batch.commit();
   }

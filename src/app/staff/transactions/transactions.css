@@ -109,7 +109,7 @@
 .log-title { font-weight: 600; color: var(--text-main); margin-bottom: 2px; }
 .log-desc { font-size: 0.75rem; color: var(--text-muted); }
 
-.tag { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+.tag { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; display: inline-block; }
 .tag-transfer { background: #e0f2fe; color: #0369a1; }
 .tag-fee { background: #e0e7ff; color: #4338ca; }
 .tag-cashout { background: #fef3c7; color: #92400e; }
@@ -181,3 +181,6 @@
   object-fit: cover;
   border: 1px solid var(--border-main);
 }
+
+.text-right { text-align: right !important; }
+.nowrap { white-space: nowrap !important; }

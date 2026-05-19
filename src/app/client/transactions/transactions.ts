@@ -22,7 +22,7 @@ export class ClientTransactionsComponent implements OnInit {
   currentUserId: string = 'excel_john';
   currentUserName: string = 'Excel John';
   currentUserImage: string = '/images/client.jpg';
-  fullPhone$!: Observable<string>;
+  currentUserAccountNumber$!: Observable<string>;
 
   ngOnInit() {
     this.currentUserId = localStorage.getItem('currentUser') || 'excel_john';
@@ -59,22 +59,37 @@ export class ClientTransactionsComponent implements OnInit {
               displayAmount = displayAmount.replace('-', '+');
             }
             if (sender) {
-              displayTitle = `${sender.name} (${sender.accountNumber || sender.phone})`;
+              displayTitle = sender.name;
             } else {
               displayTitle = 'Incoming Transfer';
             }
           } else if (tx.senderId === this.currentUserId && recipient) {
-            displayTitle = `${recipient.name} (${recipient.accountNumber || recipient.phone})`;
+            displayTitle = recipient.name;
           }
 
-          return { ...tx, time: dateStr, amount: displayAmount, title: displayTitle };
-        }).sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
+          let displayType = tx.category || 'Transfer';
+          if (tx.category === 'Transfer') {
+            displayType = tx.recipientBank || 'CICO Bank';
+          } else if (tx.category === 'Deposit') {
+            if (tx.title) {
+              const method = tx.title.split(' ')[0];
+              if (['GCash', 'Maya', 'LandBank', 'UnionBank'].includes(method)) {
+                displayType = method;
+              }
+            }
+          }
+
+          return { ...tx, time: dateStr, amount: displayAmount, title: displayTitle, displayType };
+        }).sort((a: any, b: any) => {
+          const getMs = (t: any) => typeof t === 'number' ? t : (t?.toMillis ? t.toMillis() : (t?.toDate ? t.toDate().getTime() : new Date(t || 0).getTime()));
+          return getMs(b.timestamp) - getMs(a.timestamp);
+        });
       })
     );
-    this.fullPhone$ = this.dbService.getUsers().pipe(
+    this.currentUserAccountNumber$ = this.dbService.getUsers().pipe(
       map((users: any[]) => {
         const me = users.find((u: any) => u.id === this.currentUserId);
-        return me?.phone || '0900 000 0000';
+        return me?.accountNumber || 'CICO-XXXX-XXXX';
       })
     );
   }
