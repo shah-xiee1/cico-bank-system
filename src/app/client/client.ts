@@ -334,17 +334,32 @@ export class ClientComponent implements OnInit {
     let finalTitle = '';
 
     if (type === 'send') {
-      if (recipientBank === 'CICO Bank') {
-        const clients = await firstValueFrom(this.otherClients$);
-        const target = clients.find(c => (c.accountNumber || '').replace(/\s/g, '') === primary.replace(/\s/g, ''));
-        if (target) {
-          targetRecipientId = target.id;
+      const allUsers = await firstValueFrom(this.dbService.getUsers());
+      const clients = allUsers.filter((u: any) => u.role === 'Client');
+      
+      const normalizePhone = (p: string) => p ? p.replace(/\D/g, '') : '';
+      const normalizeAcc = (a: string) => a ? a.toUpperCase().replace(/[^A-Z0-9]/g, '') : '';
+      const cleanPrimary = primary.replace(/\s/g, '');
+
+      const target = clients.find(c => {
+        const accMatch = normalizeAcc(c.accountNumber) === normalizeAcc(cleanPrimary);
+        const phoneMatch = normalizePhone(c.phone) === normalizePhone(cleanPrimary);
+        return accMatch || phoneMatch;
+      });
+
+      if (target) {
+        targetRecipientId = target.id;
+        if (recipientBank === 'CICO Bank') {
           finalTitle = `${target.name} (${target.accountNumber})`;
         } else {
-          finalTitle = `${primary} (CICO Bank)`;
+          finalTitle = `${target.name} (${recipientBank}: ${primary})`;
         }
       } else {
-        finalTitle = `${recipientBank} (${primary})`;
+        if (recipientBank === 'CICO Bank') {
+          finalTitle = `${primary} (CICO Bank)`;
+        } else {
+          finalTitle = `${recipientBank} (${primary})`;
+        }
       }
     } else {
       finalTitle = `${primary} (${secondary})`;

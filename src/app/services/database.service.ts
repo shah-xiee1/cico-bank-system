@@ -172,10 +172,12 @@ export class DatabaseService {
         }
 
         const recipientBank = txData['recipientBank'] || 'CICO Bank';
-        if (recipientBank === 'CICO Bank') {
-          if (recipientId && recipientSnap?.exists()) {
+        if (recipientId && recipientSnap?.exists()) {
+          if (recipientId !== senderId || recipientBank === 'CICO Bank') {
             const currentRecBal = recipientSnap.data()?.['balance'] ?? 25000;
             recipientNewBalance = currentRecBal + numericAmount;
+          } else {
+            recipientNewBalance = null;
           }
         } else {
           recipientNewBalance = null;
